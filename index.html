@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bluefox Sales OS</title>
+<meta name="robots" content="noindex,nofollow">
+<script>if(window.innerWidth>=1100&&!/[?&]view=list/.test(location.search))location.replace("map.html");</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* layout: sticky top bar with four tabs, one column of cards, phone first, 860px max */
+  --bg:#eef1f5; --surface:#ffffff; --ink:#0d1b33; --muted:#4b5a75; --line:#d3dae5;
+  --brand:#0b2a6f; --action:#1556d6;
+  --good:#0f6b43; --good-bg:#e2f4ea; --warn:#7a4f00; --warn-bg:#fdf0d2; --bad:#a3261e; --bad-bg:#fbe6e4; --info:#12408f; --info-bg:#e3ecfd;
+  --display:'IBM Plex Sans Condensed','Arial Narrow',Arial,sans-serif;
+  --body:'IBM Plex Sans','Segoe UI',Arial,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 var(--body);-webkit-text-size-adjust:100%}
+.bar{position:sticky;top:0;z-index:20;background:var(--brand);color:#fff}
+.bar-in{max-width:860px;margin:0 auto;padding:10px 16px 4px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.brand-name{font:700 22px/1 var(--display);letter-spacing:.02em}
+.brand-sub{font:600 13px/1 var(--display);letter-spacing:.14em;text-transform:uppercase;opacity:.82;margin-left:8px}
+.bar-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.conn{font-size:12px;font-weight:600;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.18)}
+.conn.live{background:#1d7a52}.conn.local{background:#8a5a00}.conn.err{background:#a3261e}
+.me-lab{font-size:13px;opacity:.85}
+#me{width:auto;min-height:36px;padding:5px 8px;font-size:14px}
+.tabs{max-width:860px;margin:0 auto;padding:0 8px;display:flex;gap:2px;overflow-x:auto}
+.tabs a{flex:1 0 auto;text-align:center;color:#fff;text-decoration:none;font:600 15px/1 var(--display);letter-spacing:.04em;padding:12px 12px 10px;border-bottom:3px solid transparent;opacity:.75;white-space:nowrap}
+.tabs a.on{opacity:1;border-bottom-color:#fff}
+main{max-width:860px;margin:0 auto;padding:16px 16px 90px}
+.view{display:none;flex-direction:column;gap:14px}
+.view.on{display:flex}
+h1{font:700 24px/1.15 var(--display);margin:0;text-wrap:balance}
+h2{font:700 18px/1.2 var(--display);margin:0;text-wrap:balance}
+p{margin:0}
+.lede{color:var(--muted);font-size:14px;max-width:65ch}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--muted)}
+input,select,textarea{font:16px var(--body);color:var(--ink);background:#fff;border:1px solid #93a1b8;border-radius:8px;padding:9px 10px;min-height:44px;width:100%}
+textarea{min-height:84px;resize:vertical}
+:focus-visible{outline:3px solid #f2a900;outline-offset:2px}
+.checks{display:flex;flex-wrap:wrap;gap:8px}
+.checks label{display:flex;align-items:center;gap:6px;font-size:14px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;min-height:44px}
+.checks input{width:18px;height:18px;min-height:0;padding:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:9px 14px;border-radius:8px;border:1px solid var(--action);background:#fff;color:var(--action);font:600 15px var(--body);text-decoration:none;cursor:pointer}
+.btn.primary{background:var(--action);color:#fff}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+.btn.sm{min-height:38px;padding:6px 10px;font-size:14px}
+.btn:disabled{opacity:.5;cursor:default}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;border:1px solid transparent}
+.t-neutral{background:#eef1f5;color:#33415c;border-color:#c5cedc}
+.t-info{background:var(--info-bg);color:var(--info)}
+.t-warn{background:var(--warn-bg);color:var(--warn)}
+.t-good{background:var(--good-bg);color:var(--good)}
+.t-bad{background:var(--bad-bg);color:var(--bad)}
+.t-muted{background:#e6e8ec;color:#4b5565;text-decoration:line-through}
+.list{display:flex;flex-direction:column;gap:8px;list-style:none;margin:0;padding:0}
+.row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;font:inherit;color:inherit;cursor:pointer}
+.row:hover{border-color:#8fa2c4}
+.row-main{display:flex;flex-direction:column;gap:2px;min-width:0}
+.row-title{font-weight:600;overflow-wrap:anywhere}
+.row-sub{font-size:14px;color:var(--muted);overflow-wrap:anywhere}
+.row-meta{font-size:13px;color:var(--muted)}
+.row-side{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none}
+.row-rep{font-size:12px;color:var(--muted)}
+.kind{font-weight:600;color:var(--brand)}
+.empty{border:1px dashed #9aa7bb;border-radius:10px;padding:16px;color:var(--muted);background:rgba(255,255,255,.6)}
+.count{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.stats{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:15px;font-variant-numeric:tabular-nums}
+.stats b{font-weight:700}
+.map{width:100%;height:260px;border:1px solid var(--line);border-radius:8px;background:#f7f9fc;display:block}
+.stop{display:flex;flex-direction:column;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px}
+.stop-main{display:flex;align-items:flex-start;gap:10px;width:100%;text-align:left;background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}
+.num{flex:none;width:28px;height:28px;border-radius:50%;background:var(--brand);color:#fff;font:700 14px/28px var(--display);text-align:center;font-variant-numeric:tabular-nums}
+.stop-txt{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.bars{display:flex;flex-direction:column;gap:6px}
+.bar-row{display:grid;grid-template-columns:150px 1fr 48px;align-items:center;gap:8px;font-size:14px}
+.bar-track{height:14px;background:#e6eaf1;border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;background:var(--action);border-radius:4px}
+.bar-n{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.note{font-size:14px;border-left:3px solid var(--line);padding-left:10px}
+.note time{color:var(--muted);font-size:12px;display:block}
+.overlay{position:fixed;inset:0;z-index:40;background:rgba(13,27,51,.55);display:none;align-items:flex-end;justify-content:center}
+.overlay.on{display:flex}
+.sheet{background:var(--bg);width:100%;max-width:860px;max-height:92%;overflow-y:auto;border-radius:14px 14px 0 0;padding:16px;display:flex;flex-direction:column;gap:12px}
+.sheet-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.facts{margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:6px}
+.facts li{font-size:13px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:3px 8px}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:60;background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;font-size:15px;max-width:90%;display:none}
+.toast.on{display:block}
+.fine{font-size:13px;color:var(--muted);max-width:70ch}
+.zrow{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.sw{flex:none;width:14px;height:14px;border-radius:3px}
+.zlist{max-height:420px;overflow-y:auto}
+@media (max-width:420px){.bar-row{grid-template-columns:118px 1fr 40px}}
+.gate{position:fixed;inset:0;z-index:100000;background:#eef1f5;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
+.gate[hidden]{display:none}
+.gate-card{width:100%;max-width:360px;text-align:left;box-sizing:border-box;background:#fff;border:1px solid #d3dae5;border-radius:14px;padding:26px 24px 22px;box-shadow:0 10px 30px rgba(13,27,51,.10)}
+.gate-brand{display:flex;align-items:baseline;gap:8px;margin-bottom:14px}
+.gate-b1{font-weight:800;font-size:24px;color:#0b2a6f;letter-spacing:-.01em}
+.gate-b2{font-size:15px;color:#4b5a75;font-weight:600}
+.gate-msg{margin:0 0 14px;font-size:15px;line-height:1.4;color:#4b5a75}
+.gate-msg.err{color:#a3261e}
+.gate-f{display:block;font-size:13px;font-weight:600;color:#0d1b33;margin-bottom:12px}
+.gate-f input{display:block;width:100%;box-sizing:border-box;margin-top:5px;padding:11px 12px;font:inherit;font-size:16px;font-weight:400;color:#0d1b33;background:#fff;border:1px solid #b9c3d3;border-radius:9px}
+.gate-f input:focus-visible,.gate-btn:focus-visible,.gate-link:focus-visible{outline:3px solid #1556d6;outline-offset:2px}
+.gate-btn{display:block;width:100%;margin-top:4px;padding:12px;font:inherit;font-size:16px;font-weight:700;color:#fff;background:#1556d6;border:0;border-radius:9px;cursor:pointer}
+.gate-btn:disabled{opacity:.6;cursor:default}
+.gate-link{display:block;margin:14px auto 0;padding:6px;font:inherit;font-size:14px;color:#1556d6;background:none;border:0;text-decoration:underline;cursor:pointer}
+.acct{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+.acct button,.acct a{font:inherit;font-size:13px;color:var(--action);background:none;border:0;padding:4px 0;text-decoration:underline;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="gate" class="gate">
+  <form id="gate-form" class="gate-card" autocomplete="on" novalidate>
+    <div class="gate-brand"><span class="gate-b1">Bluefox</span><span class="gate-b2">Sales OS</span></div>
+    <p id="gate-msg" class="gate-msg" role="status" aria-live="polite">Loading sign-in…</p>
+    <div id="gate-fields" hidden>
+      <label class="gate-f" for="gate-email">Email<input id="gate-email" type="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false"></label>
+      <label class="gate-f" for="gate-pass">Password<input id="gate-pass" type="password" autocomplete="current-password"></label>
+      <button class="gate-btn" type="submit" id="gate-go">Sign in</button>
+      <button class="gate-link" type="button" id="gate-reset">Forgot your password?</button>
+    </div>
+  </form>
+</div>
+<script>
+window.BFREADY=new Promise(function(r){window.__bfResolve=r;});
+setTimeout(function(){if(!window.BF_AUTH_LOADED){var m=document.getElementById('gate-msg');m.textContent='The sign-in service could not be reached. Check your connection and reload the page.';m.className='gate-msg err';}},12000);
+</script>
+<header class="bar">
+  <div class="bar-in">
+    <div><span class="brand-name">Bluefox</span><span class="brand-sub">Sales OS</span></div>
+    <div class="bar-right">
+      <span id="conn" class="conn" role="status">Connecting…</span>
+      <label class="me-lab" for="me">I am</label>
+      <select id="me"></select>
+    </div>
+  </div>
+  <nav class="tabs" aria-label="Sections">
+    <a href="#routes" data-view="routes">Routes</a>
+    <a href="#leads" data-view="leads">Leads</a>
+    <a href="#pipeline" data-view="pipeline">Pipeline</a>
+    <a href="#add-site" data-view="add-site">Add a site</a>
+  </nav>
+</header>
+
+<main>
+  <section class="view" id="v-routes">
+    <h1>Daily routes</h1>
+    <div class="grid">
+      <label class="f" for="rt-rep">Salesman<select id="rt-rep"></select></label>
+      <label class="f" for="rt-date">Day<input type="date" id="rt-date"></label>
+    </div>
+    <div id="rt-saved"></div>
+    <div class="card">
+      <h2>Plan a route</h2>
+      <p class="lede">Starts and ends at home base, Weddington. Picks job sites nobody has visited yet and skips anything already on the other salesman's route that day.</p>
+      <div class="grid">
+        <label class="f" for="rt-hours">Hours in the field<input type="number" id="rt-hours" min="1" max="12" step="0.5" value="7" inputmode="decimal"></label>
+        <label class="f" for="rt-stop">Minutes per stop<input type="number" id="rt-stop" min="5" max="90" step="1" value="10" inputmode="numeric"></label>
+        <label class="f" for="rt-focus">Area<select id="rt-focus"><option value="">Closest to Weddington first</option></select></label>
+      </div>
+      <div class="checks" id="rt-types">
+        <label><input type="checkbox" id="ty-cn" value="CN,CS" checked>Commercial new builds</label>
+        <label><input type="checkbox" id="ty-cu" value="CU,CA" checked>Commercial upfits and additions</label>
+        <label><input type="checkbox" id="ty-rm" value="RM" checked>Builder neighborhoods (one stop at the model home)</label>
+        <label><input type="checkbox" id="ty-rc" value="RC" checked>Other new-home communities</label>
+        <label><input type="checkbox" id="ty-rn" value="RN" checked>Single new homes</label>
+        <label><input type="checkbox" id="ty-go" value="GO" checked>General contractor offices</label>
+        <label><input type="checkbox" id="ty-fs" value="FS" checked>Sites found in the field</label>
+      </div>
+      <div class="btns"><button class="btn primary" id="rt-build" type="button">Build route</button></div>
+      <div id="rt-preview"></div>
+      <p class="fine">Drive times are estimates from map distance, not live traffic. Open the stops in Google Maps for real directions.</p>
+    </div>
+    <div class="card">
+      <h2>Numbered routes</h2>
+      <p class="lede">Splits every unvisited job site into numbered routes, each an area one salesman can finish in a day, starting and ending at home base, choosing the split with the fewest total miles. It uses the hours, minutes per stop and site types chosen above. Everyone on the team sees the same numbered routes.</p>
+      <div class="btns"><button class="btn primary" id="zn-make" type="button">Split into numbered routes</button></div>
+      <div class="count" id="zn-sum"></div>
+      <canvas class="map" id="zn-map" style="height:380px" hidden role="img" aria-label="Sketch of the numbered routes. H is home base; each numbered outline is one route."></canvas>
+      <div class="list zlist" id="zn-list"></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-leads">
+    <h1>Job sites</h1>
+    <div class="grid">
+      <label class="f" for="ld-q">Search<input type="search" id="ld-q" placeholder="Name, street, owner, contractor" autocomplete="off"></label>
+      <label class="f" for="ld-stage">Stage<select id="ld-stage"></select></label>
+      <label class="f" for="ld-kind">Type<select id="ld-kind"></select></label>
+      <label class="f" for="ld-town">Town<select id="ld-town"><option value="">All towns</option></select></label>
+      <label class="f" for="ld-rep">Assigned to<select id="ld-rep"></select></label>
+      <label class="f" for="ld-sort">Sort by<select id="ld-sort">
+        <option value="near">Closest to Weddington</option>
+        <option value="new">Newest permit</option>
+        <option value="big">Largest</option>
+        <option value="upd">Last updated</option>
+      </select></label>
+    </div>
+    <div class="count" id="ld-count"></div>
+    <div class="list" id="ld-list"></div>
+    <div class="btns"><button class="btn" id="ld-more" type="button">Show more</button></div>
+    <p class="fine" id="ld-source">Job sites pulled November 22, 2026. General contractor offices added November 23, 2026 as a starter list, not every contractor: addresses come from North Carolina contractor licence records, the Carolinas AGC member directory and company websites, and each office says which. Mecklenburg County: open building permits issued since March 1, 2026. Cabarrus County: open zoning permits for new homes and commercial work since January 2025. Lincoln County: open new-home permits since January 2025. Union County, Monroe, Waxhaw, Indian Trail, Kannapolis, Kings Mountain and Kershaw County SC: projects their planning offices list as under construction. Commercial new builds and additions are 1,500 sq ft or larger. Commercial remodels and upfits are kept at $250,000 or more in stated cost. New homes are kept only where the permit shows $600,000 or more (lowered from $700,000 on November 26, 2026) in stated construction cost; for a community of homes, that is the average per home. Outside Mecklenburg County the records carry no value, so those homes are judged by the typical home value of their area (Zillow, October 2026) plus 10% for new construction, and kept only at $700,000 or more (this part was not re-run when the line moved to $600,000). Today that means Weddington, Waxhaw, Wesley Chapel and Davidson. Home remodels and additions are left off. New homes close together are grouped into one community stop. Mass-built neighborhoods (one builder putting up many homes) were added November 25, 2026 as one stop each, at the model home or sales center where the builder's staff sit: every such neighborhood found in Mecklenburg and Union County records was ranked by home price, the cheaper half was left off, and the single-home price rule does not apply to them. On November 26, 2026 that list was cut again to the ones still being built and in the earlier stages: homes under construction now, and no more than half of the lots already sold to homeowners (where the county has no lot records yet, a home started within the last 5 months instead). Each stop shows its build stage. Later that day the list was trimmed at the owner's direction: builder neighborhoods were cut to the ones priced around $600,000 and up; remodels inside office suites, tower floors and restricted sites (airport, hospitals, data centers, schools, government) were removed. Jobs estimated to be past their finish are still listed and say so. Finish dates are estimates from the permit date and the size of the job, not site visits. Each one says whether its model home was confirmed by a county permit, taken from the builder's published address, is only a likely match from tax records, or was not found. York, Lancaster, Gaston, Iredell, Rowan, Stanly and other nearby counties are not loaded yet. Around Route 49 in Kershaw County the cut-off reaches 5 miles past the 1.75-hour ring.</p>
+  </section>
+
+  <section class="view" id="v-pipeline">
+    <h1>Pipeline</h1>
+    <div class="card"><h2>Where every lead stands</h2><div class="bars" id="pl-bars"></div></div>
+    <div class="card"><h2>By salesman</h2><div class="tbl-wrap" id="pl-reps"></div></div>
+    <div class="card"><h2>Follow-ups due</h2><div class="list" id="pl-due"></div></div>
+    <div class="card"><h2>Latest activity</h2><div class="list" id="pl-recent"></div></div>
+    <div class="card">
+      <h2>Team setup</h2>
+      <div class="grid">
+        <label class="f" for="cf-r0">Salesman 1 name<input id="cf-r0" maxlength="30" autocomplete="off"></label>
+        <label class="f" for="cf-r1">Salesman 2 name<input id="cf-r1" maxlength="30" autocomplete="off"></label>
+      </div>
+      <div class="btns"><button class="btn" id="cf-save" type="button">Save names</button></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-add-site">
+    <h1>Add a site you found</h1>
+    <p class="lede">For job sites spotted while driving that are not on the permit list. It goes straight into the shared list.</p>
+    <form class="card" id="add-form" novalidate>
+      <div class="grid">
+        <label class="f" for="ad-name">Site or project name<input id="ad-name" maxlength="80" autocomplete="off" placeholder="New retail building, Providence Rd"></label>
+        <label class="f" for="ad-addr">Address or cross streets<input id="ad-addr" maxlength="120" autocomplete="off"></label>
+        <label class="f" for="ad-town">Town<select id="ad-town"></select></label>
+        <label class="f" for="ad-sub">Type<select id="ad-sub"><option>Commercial</option><option>Residential</option><option>Remodel</option><option>Contractor office</option></select></label>
+        <label class="f" for="ad-sq">Rough size, sq ft<input id="ad-sq" type="number" min="0" step="100" inputmode="numeric"></label>
+        <label class="f" for="ad-stage">Stage<select id="ad-stage"></select></label>
+        <label class="f" for="ad-gc">Contractor on the sign<input id="ad-gc" maxlength="80" autocomplete="off"></label>
+        <label class="f" for="ad-cn">Contact name<input id="ad-cn" maxlength="60" autocomplete="off"></label>
+        <label class="f" for="ad-ph">Contact phone<input id="ad-ph" type="tel" maxlength="30" autocomplete="off"></label>
+        <label class="f" for="ad-ll">Map pin, optional<input id="ad-ll" maxlength="200" autocomplete="off" placeholder="35.1234, -80.8123"></label>
+      </div>
+      <label class="f" for="ad-note">Notes<textarea id="ad-note" maxlength="600"></textarea></label>
+      <p class="fine">Map pin: in Google Maps, press and hold on the site, then copy the two numbers it shows. Sites without a pin are listed but cannot be placed on an automatic route.</p>
+      <div class="btns"><button class="btn primary" type="submit">Add site</button></div>
+    </form>
+  </section>
+</main>
+<footer class="acct" id="acct" hidden style="padding:14px 16px 30px">Signed in as <b id="acct-email"></b><button type="button" id="acct-out">Sign out</button><a href="map.html?view=map">Open the map (best on a computer)</a></footer>
+
+<div class="overlay" id="overlay"><div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-title"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/*PURE*/
+var BASE={la:35.2271,lo:-80.8431,n:'Home base',a:''};
+var KIND={CN:'Commercial new build',CS:'Commercial shell',CA:'Commercial addition',CU:'Commercial upfit or remodel',RC:'New-home community',RN:'New home',RR:'Home remodel',FS:'Found in the field',GO:'General contractor office',RM:'Builder neighborhood (model home)'};
+var STAGES=[['new','New lead'],['visited','Visited'],['contact','Contact made'],['bidlist','On bid list'],['walk_sched','Walkthrough booked'],['walk_done','Walkthrough done'],['quoted','Quote submitted'],['won','Won'],['lost','Lost'],['skip','Not a fit']];
+var STAGE_NAME={};STAGES.forEach(function(s){STAGE_NAME[s[0]]=s[1];});
+var STAGE_TONE={'new':'neutral',visited:'info',contact:'info',bidlist:'warn',walk_sched:'warn',walk_done:'warn',quoted:'good',won:'good',lost:'bad',skip:'muted'};
+var TOWNS=['Mint Hill','Indian Trail','Charlotte','Huntersville','Matthews','Cornelius','Davidson','Pineville','Stallings','Weddington','Waxhaw','Monroe'];
+function townOf(addr){var a=String(addr||'').toLowerCase();for(var i=0;i<TOWNS.length;i++){if(a.slice(-TOWNS[i].length)===TOWNS[i].toLowerCase())return TOWNS[i];}return 'Other';}
+function hav(a,b){var R=3958.8,t=Math.PI/180,dla=(b.la-a.la)*t,dlo=(b.lo-a.lo)*t;var x=Math.sin(dla/2)*Math.sin(dla/2)+Math.cos(a.la*t)*Math.cos(b.la*t)*Math.sin(dlo/2)*Math.sin(dlo/2);return 2*R*Math.asin(Math.sqrt(x));}
+function driveMin(a,b){var mi=hav(a,b)*1.3;var mph=mi<4?24:(mi<12?32:42);return mi/mph*60+1.5;}
+var BY_FINISH=false; /* true = number the routes by what finishes soonest; false = fewest miles */
+var WLAB=['Finishing within about 2 months','Finishing in about 3 to 5 months','Finishing in about 6 to 9 months','10 months or more out, plus offices and stops with no date'];
+function finishIn(s,now){if(!s.f)return null;now=now||new Date();return (+s.f.slice(0,4)-now.getFullYear())*12+(+s.f.slice(4,6))-(now.getMonth()+1);}
+function waveOf(s,now){if(s.k==='RM')return 0;var m=finishIn(s,now);return m===null?3:m<=2?0:m<=5?1:m<=9?2:3;}
+function finishText(s){if(!s.f)return '';return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+s.f.slice(4,6)-1]+' '+s.f.slice(0,4);}
+function parseSites(text){return text.split('\n').filter(Boolean).map(function(l){var p=l.split('|');var s={id:p[0],k:p[1],n:p[2],a:p[3],z:p[4],la:+p[5],lo:+p[6],sq:+p[7]||0,c:+p[8]||0,d:p[9],o:p[10],u:+p[11]||1,sub:'',x:p[13]||'',f:p[14]||''};s.town=p[12]||townOf(s.a);s.dist=hav(BASE,s);return s;});}
+function greedy(cands,budgetMin,perStop){var cur=BASE,t=0,route=[],pool=cands.slice();while(pool.length){pool.sort(function(x,y){return hav(cur,x)-hav(cur,y);});var picked=-1;for(var i=0;i<Math.min(pool.length,8);i++){var s=pool[i];if(t+driveMin(cur,s)+perStop+driveMin(s,BASE)<=budgetMin){picked=i;break;}}if(picked<0)break;var p=pool.splice(picked,1)[0];t+=driveMin(cur,p)+perStop;route.push(p);cur=p;}return route;}
+function twoOpt(r){var pts=[BASE].concat(r,[BASE]),improved=true,guard=0;while(improved&&guard++<60){improved=false;for(var i=1;i<pts.length-2;i++){for(var j=i+1;j<pts.length-1;j++){var d1=hav(pts[i-1],pts[i])+hav(pts[j],pts[j+1]);var d2=hav(pts[i-1],pts[j])+hav(pts[i],pts[j+1]);if(d2+1e-9<d1){var seg=pts.slice(i,j+1).reverse();for(var k=0;k<seg.length;k++)pts[i+k]=seg[k];improved=true;}}}}return pts.slice(1,-1);}
+function routeStats(stops,perStop){var prev=BASE,drive=0,mi=0,legs=[];stops.forEach(function(s){if(s.la){var m=driveMin(prev,s);drive+=m;mi+=hav(prev,s)*1.3;legs.push(m);prev=s;}else legs.push(0);});drive+=driveMin(prev,BASE);mi+=hav(prev,BASE)*1.3;return {drive:drive,mi:mi,total:drive+stops.length*perStop,legs:legs};}
+function mapPt(s){return s.la?(s.la+','+s.lo):encodeURIComponent(s.a+', NC');}
+function mapsLinks(stops){var out=[],b=BASE.la+','+BASE.lo,origin=b;for(var i=0;i<stops.length;i+=9){var g=stops.slice(i,i+9),last=i+9>=stops.length;var dest=last?b:mapPt(g[g.length-1]);var wps=(last?g:g.slice(0,-1)).map(mapPt).join('%7C');out.push({label:(g.length>1?'Stops '+(i+1)+' to '+(i+g.length):'Stop '+(i+1))+(last?', then back':''),url:'https://www.google.com/maps/dir/?api=1&origin='+origin+'&destination='+dest+(wps?'&waypoints='+wps:'')+'&travelmode=driving'});origin=mapPt(g[g.length-1]);}return out;}
+function parseLL(text){var m=String(text||'').match(/(-?\d{1,2}\.\d{3,})\s*,\s*(-?\d{1,3}\.\d{3,})/);if(!m)return null;var la=+m[1],lo=+m[2];if(la<33||la>37.5||lo>-78||lo<-84)return null;return {la:la,lo:lo};}
+/*END PURE*/
+
+(function(){
+'use strict';
+delete KIND.RR;
+var ZCOL=['#1556d6','#d6247a','#0f8a5f','#b35c00','#6a3fc0','#0a7f8f','#a3261e','#4d6b00'];
+var $=function(s){return document.querySelector(s);};
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function pad(n){return String(n).padStart(2,'0');}
+function todayStr(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtD8(d){d=String(d||'');if(d.length!==8)return '';return MON[+d.slice(4,6)-1]+' '+(+d.slice(6,8))+', '+d.slice(0,4);}
+function fmtIso(s){return s?fmtD8(String(s).replace(/-/g,'')):'';}
+function fmtWhen(ms){if(!ms)return '';var d=new Date(ms);var h=d.getHours(),ap=h<12?'AM':'PM';h=h%12||12;return MON[d.getMonth()]+' '+d.getDate()+', '+h+':'+pad(d.getMinutes())+' '+ap;}
+function fmtMoney(n){if(!n)return '';if(n>=1e6)return '$'+(n/1e6).toFixed(n>=1e7?0:1)+'M';if(n>=1e3)return '$'+Math.round(n/1e3)+'K';return '$'+n;}
+function fmtDur(min){var h=Math.floor(min/60),m=Math.round(min-h*60);if(m===60){h++;m=0;}return (h?h+' h ':'')+m+' min';}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+
+var SITES=[],CUSTOM=[],BY=new Map(),LEADS=new Map(),ROUTES=new Map();
+var CFG={reps:['Salesman 1','Salesman 2']};
+var db=null,ME='office',LIMIT=40,PREVIEW=null,ZONES=null,sitesState='loading',openId=null,armed=null;
+var store={get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}}};
+
+function L(id){return LEADS.get(id)||{};}
+function stageOf(id){return L(id).st||'new';}
+function repName(i){return (i===null||i===undefined||i==='')?'':(CFG.reps[+i]||('Salesman '+(+i+1)));}
+function meName(){return ME==='office'?'Office':repName(ME);}
+function allSites(){return SITES.concat(CUSTOM);}
+function rebuild(){
+  CUSTOM=[];
+  LEADS.forEach(function(l,id){if(l&&l.site){var s=l.site;var o={id:id,k:'FS',n:s.n||'Unnamed site',a:s.a||'',z:'',la:+s.la||0,lo:+s.lo||0,sq:+s.sq||0,c:0,d:s.d||'',o:'',u:1,town:s.town||'Other',sub:s.sub||''};o.dist=o.la?hav(BASE,o):9999;CUSTOM.push(o);}});
+  BY=new Map();SITES.forEach(function(s){BY.set(s.id,s);});CUSTOM.forEach(function(s){BY.set(s.id,s);});
+}
+function toast(msg){var t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(toast.tm);toast.tm=setTimeout(function(){t.classList.remove('on');},3200);}
+function setConn(kind,text){var c=$('#conn');c.className='conn'+(kind?' '+kind:'');c.textContent=text;}
+
+/* saving */
+var chains={};
+function chain(key,fn){chains[key]=(chains[key]||Promise.resolve()).then(fn).catch(function(e){toast('That change did not save ('+((e&&e.code)||'error')+'). Check your signal and try again.');});}
+function saveLocal(){var o={leads:{},routes:{},cfg:CFG,zones:ZONES};LEADS.forEach(function(v,k){o.leads[k]=v;});ROUTES.forEach(function(v,k){o.routes[k]=v;});store.set('bf_local',JSON.stringify(o));}
+function loadLocal(){try{var o=JSON.parse(store.get('bf_local')||'null');if(o){LEADS=new Map(Object.entries(o.leads||{}));ROUTES=new Map(Object.entries(o.routes||{}));if(o.cfg&&o.cfg.reps)CFG=o.cfg;ZONES=(o.zones&&Array.isArray(o.zones.list))?o.zones:null;}}catch(e){}}
+function saveLead(id,patch){
+  var next=Object.assign({},L(id),patch,{upd:Date.now(),by:meName()});
+  if(!next.st)next.st='new';
+  LEADS.set(id,next);rebuild();
+  if(db)chain('leads/'+id,function(){return db.doc('leads/'+id).set(next);});else saveLocal();
+  renderAll();
+}
+function saveRoute(id,data){
+  if(data){ROUTES.set(id,data);if(db)chain('routes/'+id,function(){return db.doc('routes/'+id).set(data);});}
+  else{ROUTES.delete(id);if(db)chain('routes/'+id,function(){return db.doc('routes/'+id).delete();});}
+  if(!db)saveLocal();
+  renderRoutes();
+}
+function saveCfg(){if(db)chain('config/main',function(){return db.doc('config/main').set(CFG);});else saveLocal();fillReps();renderAll();}
+
+/* selects */
+function setOptions(sel,opts,keep){var v=keep===undefined?sel.value:keep;sel.innerHTML=opts.map(function(o){return '<option value="'+esc(o[0])+'">'+esc(o[1])+'</option>';}).join('');if(opts.some(function(o){return String(o[0])===String(v);}))sel.value=v;}
+function repOpts(){return CFG.reps.map(function(n,i){return [String(i),n];});}
+function fillReps(){
+  setOptions($('#me'),[['office','Office']].concat(repOpts()),ME);
+  setOptions($('#rt-rep'),repOpts());
+  setOptions($('#ld-rep'),[['','Anyone'],['none','Unassigned']].concat(repOpts()));
+  if(document.activeElement!==$('#cf-r0'))$('#cf-r0').value=CFG.reps[0]||'';
+  if(document.activeElement!==$('#cf-r1'))$('#cf-r1').value=CFG.reps[1]||'';
+}
+function fillStatic(){
+  setOptions($('#ld-stage'),[['','All stages'],['active','In progress (contact through quote)']].concat(STAGES));
+  setOptions($('#ld-kind'),[['','All types'],['COM','All commercial'],['RES','All residential']].concat(Object.keys(KIND).map(function(k){return [k,KIND[k]];})));
+  setOptions($('#ad-town'),TOWNS.slice().sort().map(function(t){return [t,t];}).concat([['Other','Other']]),'Charlotte');
+  setOptions($('#ad-stage'),STAGES.slice(0,7),'visited');
+  $('#rt-date').value=todayStr();
+}
+function fillTowns(){
+  var counts={};SITES.forEach(function(s){counts[s.town]=(counts[s.town]||0)+1;});
+  var towns=Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];});
+  setOptions($('#ld-town'),[['','All towns']].concat(towns.map(function(t){return [t,t+' ('+counts[t]+')'];})));
+  setOptions($('#rt-focus'),[['','Closest to Weddington first']].concat(towns.map(function(t){return [t,t+' only'];})));
+}
+
+/* shared row html */
+function rowWith(s,extra){var mark='</span><span class="row-side">';var h=rowHtml(s),i=h.indexOf(mark);return i<0?h:h.slice(0,i)+'<span class="row-meta">'+extra+'</span>'+h.slice(i);}
+function metaLine(s){var m=['<span class="kind">'+esc(KIND[s.k]||'Site')+(s.sub?' · '+esc(s.sub):'')+'</span>'];if(s.u>1)m.push(s.u+' homes');if(s.sq)m.push(s.sq.toLocaleString()+' sq ft');else if(s.k[0]==='C')m.push('size not listed');if(s.c)m.push(fmtMoney(s.c));if(s.d)m.push((s.k==='FS'?'added ':'permit ')+fmtD8(s.d));return m.join(' · ');}
+function pill(id){var st=stageOf(id);return '<span class="pill t-'+STAGE_TONE[st]+'">'+esc(STAGE_NAME[st])+'</span>';}
+function rowHtml(s){var l=L(s.id);return '<button class="row" type="button" data-open="'+esc(s.id)+'"><span class="row-main"><span class="row-title">'+esc(s.n||s.a)+'</span><span class="row-sub">'+esc(s.a)+(s.z?' '+esc(s.z):'')+(l.gc?' · '+esc(l.gc):'')+'</span><span class="row-meta">'+metaLine(s)+'</span></span><span class="row-side">'+pill(s.id)+'<span class="row-rep">'+esc(repName(l.rep))+'</span></span></button>';}
+
+/* leads view */
+function filtered(){
+  var q=$('#ld-q').value.trim().toLowerCase(),st=$('#ld-stage').value,kd=$('#ld-kind').value,tw=$('#ld-town').value,rp=$('#ld-rep').value,sort=$('#ld-sort').value;
+  var arr=allSites().filter(function(s){
+    var l=L(s.id),stg=l.st||'new';
+    if(st==='active'){if(['new','visited','won','lost','skip'].indexOf(stg)>=0)return false;}else if(st&&stg!==st)return false;
+    if(kd==='COM'){if(s.k[0]!=='C')return false;}else if(kd==='RES'){if(s.k[0]!=='R')return false;}else if(kd&&s.k!==kd)return false;
+    if(tw&&s.town!==tw)return false;
+    if(rp==='none'){if(l.rep!==null&&l.rep!==undefined)return false;}else if(rp!==''&&String(l.rep)!==rp)return false;
+    if(q){var hay=(s.n+' '+s.a+' '+s.o+' '+s.z+' '+s.id+' '+(l.gc||'')+' '+(l.cn||'')).toLowerCase();if(hay.indexOf(q)<0)return false;}
+    return true;
+  });
+  if(sort==='near')arr.sort(function(a,b){return a.dist-b.dist;});
+  else if(sort==='new')arr.sort(function(a,b){return String(b.d).localeCompare(String(a.d));});
+  else if(sort==='big')arr.sort(function(a,b){return (b.sq-a.sq)||(b.c-a.c);});
+  else arr.sort(function(a,b){return (L(b.id).upd||0)-(L(a.id).upd||0);});
+  return arr;
+}
+function renderLeads(){
+  var box=$('#ld-list');
+  if(sitesState==='loading'){box.innerHTML='<div class="empty">Loading the permit list…</div>';$('#ld-count').textContent='';$('#ld-more').hidden=true;return;}
+  var arr=filtered();
+  $('#ld-count').textContent=arr.length.toLocaleString()+' of '+allSites().length.toLocaleString()+' sites and offices'+(sitesState==='failed'?' (the site list has not been loaded yet; the office loads it from the map page)':'');
+  box.innerHTML=arr.length?arr.slice(0,LIMIT).map(rowHtml).join(''):'<div class="empty">No job sites match those filters.</div>';
+  $('#ld-more').hidden=arr.length<=LIMIT;
+}
+
+/* routes view */
+function routeKey(){return $('#rt-date').value+'_r'+$('#rt-rep').value;}
+function drawMap(cv,stops){
+  if(!cv)return;var pts=[BASE].concat(stops.filter(function(s){return s.la;}));
+  var w=cv.clientWidth||600,h=cv.clientHeight||260,r=window.devicePixelRatio||1;cv.width=w*r;cv.height=h*r;var g=cv.getContext('2d');g.setTransform(r,0,0,r,0,0);g.clearRect(0,0,w,h);
+  var k=Math.cos(BASE.la*Math.PI/180),xs=pts.map(function(p){return p.lo*k;}),ys=pts.map(function(p){return p.la;});
+  var x0=Math.min.apply(null,xs),x1=Math.max.apply(null,xs),y0=Math.min.apply(null,ys),y1=Math.max.apply(null,ys),padPx=26;
+  var sc=Math.min((w-2*padPx)/Math.max(x1-x0,1e-4),(h-2*padPx)/Math.max(y1-y0,1e-4));
+  var ox=(w-(x1-x0)*sc)/2,oy=(h-(y1-y0)*sc)/2;
+  function P(p){return [ox+(p.lo*k-x0)*sc,oy+(y1-p.la)*sc];}
+  g.lineWidth=2;g.strokeStyle='#1556d6';g.beginPath();pts.forEach(function(p,i){var q=P(p);if(i)g.lineTo(q[0],q[1]);else g.moveTo(q[0],q[1]);});g.stroke();
+  if(pts.length>1){g.setLineDash([5,5]);g.strokeStyle='#7d8aa3';g.beginPath();var a=P(pts[pts.length-1]),b=P(BASE);g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke();g.setLineDash([]);}
+  g.textAlign='center';g.textBaseline='middle';g.font='700 11px Arial';
+  var n=0;stops.forEach(function(s,i){if(!s.la)return;var q=P(s);g.fillStyle='#0b2a6f';g.beginPath();g.arc(q[0],q[1],10,0,6.2832);g.fill();g.fillStyle='#fff';g.fillText(String(i+1),q[0],q[1]+0.5);n++;});
+  var hq=P(BASE);g.fillStyle='#0f6b43';g.fillRect(hq[0]-9,hq[1]-9,18,18);g.fillStyle='#fff';g.fillText('H',hq[0],hq[1]+0.5);
+}
+function routeHtml(stops,o){
+  var st=routeStats(stops,o.per),done=stops.filter(function(s){return stageOf(s.id)!=='new';}).length;
+  var h='<div class="card"><h2>'+o.title+'</h2><div class="stats"><span><b>'+stops.length+'</b> stops</span><span>about <b>'+fmtDur(st.total)+'</b> in the field</span><span><b>'+fmtDur(st.drive)+'</b> driving, '+Math.round(st.mi)+' miles</span>'+(o.saved?'<span><b>'+done+' of '+stops.length+'</b> visited</span>':'')+'</div>';
+  h+='<canvas class="map" role="img" aria-label="Map sketch of the route. H is home base; numbers are the stops in order."></canvas>';
+  h+='<div class="btns">'+mapsLinks(stops).map(function(l){return '<a class="btn sm" href="'+esc(l.url)+'" target="_blank" rel="noopener">Google Maps: '+esc(l.label)+'</a>';}).join('')+'</div>';
+  h+='<ol class="list">'+stops.map(function(s,i){
+    return '<li class="stop"><button class="stop-main" type="button" data-open="'+esc(s.id)+'"><span class="num">'+(i+1)+'</span><span class="stop-txt"><span class="row-title">'+esc(s.n||s.a)+'</span><span class="row-sub">'+esc(s.a)+(s.z?' '+esc(s.z):'')+'</span><span class="row-meta">'+metaLine(s)+(st.legs[i]?' · about '+Math.round(st.legs[i])+' min drive':'')+'</span></span>'+pill(s.id)+'</button><span class="btns"><a class="btn sm" href="'+esc('https://www.google.com/maps/dir/?api=1&destination='+mapPt(s)+'&travelmode=driving')+'" target="_blank" rel="noopener">Directions</a><button class="btn sm" type="button" data-remove="'+esc(s.id)+'">Remove</button></span></li>';
+  }).join('')+'</ol>';
+  h+='<div class="btns">'+(o.saved?'<button class="btn sm danger" type="button" data-act="delete">'+(armed==='delete'?'Tap again to delete this route':'Delete this route')+'</button>':'<button class="btn primary" type="button" data-act="save">'+esc(o.saveLabel)+'</button><button class="btn" type="button" data-act="discard">Discard</button>')+'</div>';
+  return h+'</div>';
+}
+function stopsOf(ids){return (ids||[]).map(function(x){return BY.get(x);}).filter(Boolean);}
+function renderRoutes(){
+  var box=$('#rt-saved'),key=routeKey(),r=ROUTES.get(key),name=repName($('#rt-rep').value),day=fmtIso($('#rt-date').value);
+  if(sitesState==='loading'){box.innerHTML='<div class="empty">Loading the permit list…</div>';return;}
+  var stops=r?stopsOf(r.ids):[];
+  if(!stops.length){box.innerHTML='<div class="empty">No route saved for '+esc(name)+' on '+esc(day)+'. Build one below.</div>';}
+  else{box.innerHTML=routeHtml(stops,{saved:true,per:r.per||15,title:esc(name)+'’s route, '+esc(day)});drawMap(box.querySelector('canvas'),stops);}
+  renderPreview();renderZones();
+}
+function renderPreview(){
+  var box=$('#rt-preview');if(!PREVIEW){box.innerHTML='';return;}
+  var stops=stopsOf(PREVIEW.ids);
+  if(!stops.length){box.innerHTML='<div class="empty">'+esc(PREVIEW.msg||'No stops fit. Try more hours, another area or more site types.')+'</div>';return;}
+  var has=ROUTES.has(routeKey());
+  box.innerHTML=routeHtml(stops,{saved:false,per:PREVIEW.per,title:PREVIEW.zone?'Route '+PREVIEW.zone:'Proposed route',saveLabel:(has?'Replace the saved route for ':'Save as the route for ')+repName($('#rt-rep').value)});
+  drawMap(box.querySelector('canvas'),stops);
+}
+function buildPreview(){
+  if(sitesState==='loading'){toast('The permit list is still loading.');return;}
+  var date=$('#rt-date').value,mine=routeKey(),hours=clamp(+$('#rt-hours').value||6,1,12),per=clamp(+$('#rt-stop').value||15,5,90),focus=$('#rt-focus').value,kinds={};
+  document.querySelectorAll('#rt-types input:checked').forEach(function(c){c.value.split(',').forEach(function(k){kinds[k]=1;});});
+  var taken={};ROUTES.forEach(function(r,id){if(r.date===date&&id!==mine)(r.ids||[]).forEach(function(x){taken[x]=1;});});
+  var cands=allSites().filter(function(s){return s.la&&kinds[s.k]&&!taken[s.id]&&stageOf(s.id)==='new'&&(!focus||s.town===focus);});
+  var stops=twoOpt(greedy(cands,hours*60,per));
+  PREVIEW={ids:stops.map(function(s){return s.id;}),per:per,msg:cands.length?'':'No unvisited job sites match that area and those types.'};
+  renderPreview();
+  var el=$('#rt-preview');if(el.scrollIntoView)el.scrollIntoView({block:'nearest'});
+}
+function routeClick(e,isPreview){
+  var t=e.target.closest('[data-open],[data-remove],[data-act]');if(!t)return;
+  if(t.dataset.open){openLead(t.dataset.open);return;}
+  var key=routeKey();
+  if(t.dataset.remove){
+    if(isPreview){PREVIEW.ids=PREVIEW.ids.filter(function(x){return x!==t.dataset.remove;});renderPreview();}
+    else{var r=ROUTES.get(key);if(r){var ids=r.ids.filter(function(x){return x!==t.dataset.remove;});saveRoute(key,ids.length?Object.assign({},r,{ids:ids}):null);}}
+    return;
+  }
+  if(t.dataset.act==='save'){saveRoute(key,{date:$('#rt-date').value,rep:+$('#rt-rep').value,ids:PREVIEW.ids.slice(),per:PREVIEW.per,zone:PREVIEW.zone||null,made:Date.now(),by:meName()});PREVIEW=null;renderRoutes();toast('Route saved.');window.scrollTo(0,0);}
+  else if(t.dataset.act==='discard'){PREVIEW=null;renderPreview();}
+  else if(t.dataset.act==='delete'){if(armed==='delete'){armed=null;saveRoute(key,null);toast('Route deleted.');}else{armed='delete';renderRoutes();setTimeout(function(){if(armed==='delete'){armed=null;renderRoutes();}},4000);}}
+}
+
+function parseZones(text){var ls=String(text||'').trim().split('\n'),m=(ls[0]||'').split('|');if(m[0]!=='META')return null;var list=[];for(var i=1;i<ls.length;i++){var p=ls[i].split('|');if(p.length>=2&&p[1])list.push({n:+p[0],ids:p[1].split(','),w:(p[2]===undefined||p[2]==='')?-1:+p[2]});}return list.length?{made:+m[1],per:+m[2],hours:+m[3],miles:+m[4],builtin:true,prev:(m[5]||'').split(',').filter(Boolean).map(Number),list:list}:null;}
+function staleBuiltin(z,d){return !!(z&&d&&z.made!==d.made&&(z.builtin||(d.prev||[]).indexOf(z.made)>=0));}
+var DEFAULT_ZONES=null;
+/* day areas */
+function orderStops(stops){var pool=stops.filter(function(s){return s.la;}),rest=stops.filter(function(s){return !s.la;}),cur=BASE,out=[];while(pool.length){var bi=0,bd=1e9;for(var i=0;i<pool.length;i++){var d=hav(cur,pool[i]);if(d<bd){bd=d;bi=i;}}cur=pool.splice(bi,1)[0];out.push(cur);}return twoOpt(out).concat(rest);}
+function hilbertD(x,y,n){var rx,ry,s,d=0,t;for(s=n>>1;s>0;s>>=1){rx=(x&s)>0?1:0;ry=(y&s)>0?1:0;d+=s*s*((3*rx)^ry);if(ry===0){if(rx===1){x=n-1-x;y=n-1-y;}t=x;x=y;y=t;}}return d;}
+function hull(pts){
+  pts=pts.slice().sort(function(a,b){return a[0]-b[0]||a[1]-b[1];});
+  function cross(o,a,b){return (a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);}
+  var lower=[],upper=[],i,q;
+  for(i=0;i<pts.length;i++){q=pts[i];while(lower.length>=2&&cross(lower[lower.length-2],lower[lower.length-1],q)<=0)lower.pop();lower.push(q);}
+  for(i=pts.length-1;i>=0;i--){q=pts[i];while(upper.length>=2&&cross(upper[upper.length-2],upper[upper.length-1],q)<=0)upper.pop();upper.push(q);}
+  upper.pop();lower.pop();return lower.concat(upper);
+}
+function segmentPool(pool,per,budget){
+  var k=Math.cos(BASE.la*Math.PI/180),minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;
+  pool.forEach(function(s){var x=s.lo*k;minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,s.la);maxY=Math.max(maxY,s.la);});
+  var span=Math.max(maxX-minX,maxY-minY,1e-6),groups=null,bestMi=Infinity;
+  function fits(g){return routeStats(orderStops(g),per).total<=budget;}
+  for(var v=4;v<8;v++){
+    var order=pool.map(function(s){var x=Math.min(1023,Math.floor((s.lo*k-minX)/span*1023)),y=Math.min(1023,Math.floor((s.la-minY)/span*1023)),t;if(v&1)x=1023-x;if(v&2)y=1023-y;if(v&4){t=x;x=y;y=t;}return {s:s,h:hilbertD(x,y,1024)};}).sort(function(a,b){return a.h-b.h;});
+    var gs=[],cur=[];
+    order.forEach(function(o){var trial=cur.concat([o.s]);if(cur.length&&!fits(trial)){gs.push(cur);cur=[o.s];}else cur=trial;});
+    if(cur.length)gs.push(cur);
+    for(var i=1;i<gs.length;i++){if(gs[i].length<10){var m=gs[i-1].concat(gs[i]),h=Math.ceil(m.length/2),A=m.slice(0,h),B=m.slice(h);if(fits(A)&&fits(B)){gs[i-1]=A;gs[i]=B;}}}
+    var mi=0;gs.forEach(function(g){mi+=routeStats(orderStops(g),per).mi;});
+    if(mi<bestMi){bestMi=mi;groups=gs;}
+  }
+  return {groups:groups,mi:bestMi};
+}
+function splitAreas(){
+  if(sitesState==='loading'){toast('The permit list is still loading.');return;}
+  var hours=clamp(+$('#rt-hours').value||6,1,12),per=clamp(+$('#rt-stop').value||15,5,90),budget=hours*60,kinds={};
+  document.querySelectorAll('#rt-types input:checked').forEach(function(c){c.value.split(',').forEach(function(k){kinds[k]=1;});});
+  var pool=allSites().filter(function(s){return s.la&&s.k!=='RR'&&kinds[s.k]&&stageOf(s.id)==='new';});
+  if(!pool.length){toast('No unvisited job sites match those site types.');return;}
+  var zs=[],bestMi=0,now=new Date();
+  (BY_FINISH?[0,1,2,3]:[-1]).forEach(function(w){var part=w<0?pool:pool.filter(function(s){return waveOf(s,now)===w;});if(!part.length)return;var r=segmentPool(part,per,budget);bestMi+=r.mi;
+    r.groups.map(function(g){var la=0,lo=0;g.forEach(function(s){la+=s.la;lo+=s.lo;});return {ids:orderStops(g).map(function(s){return s.id;}),d:hav(BASE,{la:la/g.length,lo:lo/g.length}),w:w};}).sort(function(a,b){return a.d-b.d;}).forEach(function(z){zs.push(z);});});
+  ZONES={made:Date.now(),by:meName(),per:per,hours:hours,miles:Math.round(bestMi),list:zs.map(function(z,i){return {n:i+1,ids:z.ids,w:z.w};})};
+  armed=null;
+  if(db)chain('zones/main',function(){return db.doc('zones/main').set(ZONES);});else saveLocal();
+  renderZones();toast('Split '+pool.length.toLocaleString()+' sites into '+ZONES.list.length+' numbered routes.');
+}
+function renderZones(){
+  var box=$('#zn-list'),sum=$('#zn-sum');
+  $('#zn-make').textContent=ZONES?(armed==='zones'?'Tap again to replace the current routes':'Split again'):'Split into numbered routes';
+  if(sitesState==='loading'){sum.textContent='';box.innerHTML='';$('#zn-map').hidden=true;return;}
+  if(!ZONES||!ZONES.list||!ZONES.list.length){sum.textContent='';box.innerHTML='<div class="empty">No numbered routes yet.</div>';$('#zn-map').hidden=true;return;}
+  var sched={},open=0,lastW=-2;ROUTES.forEach(function(r){if(r.zone&&(!sched[r.zone]||r.date>sched[r.zone].date))sched[r.zone]=r;});
+  box.innerHTML=ZONES.list.map(function(z){
+    var stops=stopsOf(z.ids),left=stops.filter(function(s){return stageOf(s.id)==='new';}).length,st=routeStats(stops,ZONES.per||15),tc={},town='';
+    stops.forEach(function(s){tc[s.town]=(tc[s.town]||0)+1;if(!town||tc[s.town]>tc[town])town=s.town;});
+    var sc=sched[z.n];if(left)open++;
+    var head='';if(z.w>=0&&z.w!==lastW){lastW=z.w;head='<div class="zhead" style="font-weight:600;margin:14px 0 4px">'+esc(WLAB[z.w]||'')+'</div>';}
+    return head+'<div class="zrow"><span class="sw" style="background:'+ZCOL[(z.n-1)%ZCOL.length]+'"></span><span class="row-main" style="flex:1"><span class="row-title">Route '+(+z.n)+(town?' · '+esc(town):'')+'</span><span class="row-meta">'+stops.length+' stops · about '+fmtDur(st.total)+' · '+(left?left+' not yet visited':'all visited')+(sc?' · scheduled '+esc(fmtIso(sc.date))+', '+esc(repName(sc.rep)):'')+'</span></span><button class="btn sm" type="button" data-zone="'+(+z.n)+'">Open</button></div>';
+  }).join('');
+  sum.textContent=ZONES.list.length+' numbered routes, each about one '+fmtDur((+ZONES.hours||6)*60)+' day for one salesman. '+open+' still have unvisited sites, which is about '+Math.ceil(open/2)+' working days with two salesmen.'+(ZONES.miles?' About '+(+ZONES.miles).toLocaleString()+' miles of driving in total.':'')+(ZONES.list[0].w>=0?' They are numbered by what is expected to finish soonest.':'')+' Split on '+fmtWhen(ZONES.made)+'.';
+  drawZoneMap();
+}
+function drawZoneMap(){
+  var cv=$('#zn-map');if(!ZONES||!ZONES.list||!ZONES.list.length){cv.hidden=true;return;}cv.hidden=false;
+  var w=cv.clientWidth||600,h=cv.clientHeight||380,r=window.devicePixelRatio||1;cv.width=w*r;cv.height=h*r;var g=cv.getContext('2d');g.setTransform(r,0,0,r,0,0);g.clearRect(0,0,w,h);
+  var k=Math.cos(BASE.la*Math.PI/180),zs=ZONES.list.map(function(z){return {n:+z.n,stops:stopsOf(z.ids).filter(function(s){return s.la;})};}).filter(function(z){return z.stops.length;});
+  var x0=BASE.lo*k,x1=x0,y0=BASE.la,y1=y0;zs.forEach(function(z){z.stops.forEach(function(s){var x=s.lo*k;x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,s.la);y1=Math.max(y1,s.la);});});
+  var padPx=18,sc=Math.min((w-2*padPx)/Math.max(x1-x0,1e-4),(h-2*padPx)/Math.max(y1-y0,1e-4)),ox=(w-(x1-x0)*sc)/2,oy=(h-(y1-y0)*sc)/2;
+  function P(lo,la){return [ox+(lo*k-x0)*sc,oy+(y1-la)*sc];}
+  zs.forEach(function(z){var col=ZCOL[(z.n-1)%ZCOL.length],hl=hull(z.stops.map(function(s){return [s.lo*k,s.la,s];}));g.strokeStyle=col;g.fillStyle=col;g.lineWidth=1.5;
+    if(hl.length>=3){g.beginPath();hl.forEach(function(q,i){var p=P(q[2].lo,q[2].la);if(i)g.lineTo(p[0],p[1]);else g.moveTo(p[0],p[1]);});g.closePath();g.globalAlpha=0.18;g.fill();g.globalAlpha=1;g.stroke();}
+    else z.stops.forEach(function(s){var p=P(s.lo,s.la);g.beginPath();g.arc(p[0],p[1],4,0,6.2832);g.stroke();});});
+  g.font='700 10px Arial';g.textAlign='center';g.textBaseline='middle';
+  zs.forEach(function(z){var la=0,lo=0;z.stops.forEach(function(s){la+=s.la;lo+=s.lo;});var p=P(lo/z.stops.length,la/z.stops.length);g.fillStyle='#ffffff';g.fillRect(p[0]-8,p[1]-6,16,12);g.fillStyle='#0d1b33';g.fillText(String(z.n),p[0],p[1]+0.5);});
+  var hq=P(BASE.lo,BASE.la);g.fillStyle='#0f6b43';g.fillRect(hq[0]-7,hq[1]-7,14,14);g.fillStyle='#ffffff';g.fillText('H',hq[0],hq[1]+0.5);
+}
+function openZone(n){
+  var z=ZONES&&ZONES.list.filter(function(x){return +x.n===n;})[0];if(!z)return;
+  var stops=stopsOf(z.ids),left=stops.filter(function(s){return stageOf(s.id)==='new';});
+  PREVIEW={ids:orderStops(left.length?left:stops).map(function(s){return s.id;}),per:+ZONES.per||15,zone:n,msg:''};renderPreview();
+  var el=$('#rt-preview');if(el.scrollIntoView)el.scrollIntoView({block:'start'});
+  toast('Route '+n+' is ready. Pick the salesman and day at the top, then save.');
+}
+
+/* pipeline view */
+function renderPipeline(){
+  var counts={};STAGES.forEach(function(s){counts[s[0]]=0;});var total=allSites().length,touched=0;
+  LEADS.forEach(function(l,id){if(!BY.has(id))return;var st=l.st||'new';if(st!=='new'){counts[st]=(counts[st]||0)+1;touched++;}});
+  counts['new']=Math.max(total-touched,0);
+  var max=1;STAGES.forEach(function(s){if(s[0]!=='new')max=Math.max(max,counts[s[0]]);});
+  $('#pl-bars').innerHTML=STAGES.map(function(s){var n=counts[s[0]];var wd=s[0]==='new'?100:Math.round(n/max*100);return '<div class="bar-row"><span>'+esc(s[1])+'</span><span class="bar-track"><span class="bar-fill" style="display:block;width:'+(n?Math.max(wd,2):0)+'%'+(s[0]==='new'?';background:#aab6c9':'')+'"></span></span><span class="bar-n">'+n.toLocaleString()+'</span></div>';}).join('');
+  var cols=[['visited','Visited'],['contact','Contact'],['bidlist','Bid list'],['walk','Walkthrough'],['quoted','Quoted'],['won','Won']];
+  var rows=CFG.reps.map(function(n,i){var c={visited:0,contact:0,bidlist:0,walk:0,quoted:0,won:0};LEADS.forEach(function(l,id){if(!BY.has(id)||l.rep!==i)return;var st=l.st;if(st==='walk_sched'||st==='walk_done')c.walk++;else if(c[st]!==undefined)c[st]++;});return '<tr><td>'+esc(n)+'</td>'+cols.map(function(k){return '<td>'+c[k[0]]+'</td>';}).join('')+'</tr>';}).join('');
+  $('#pl-reps').innerHTML='<table><thead><tr><th>Salesman</th>'+cols.map(function(k){return '<th>'+k[1]+'</th>';}).join('')+'</tr></thead><tbody>'+rows+'</tbody></table>';
+  var today=todayStr(),due=[],recent=[];
+  LEADS.forEach(function(l,id){var s=BY.get(id);if(!s)return;if(l.next&&l.next<=today&&['won','lost','skip'].indexOf(l.st)<0)due.push(s);if(l.upd)recent.push(s);});
+  due.sort(function(a,b){return String(L(a.id).next).localeCompare(String(L(b.id).next));});
+  recent.sort(function(a,b){return L(b.id).upd-L(a.id).upd;});
+  $('#pl-due').innerHTML=due.length?due.slice(0,25).map(function(s){return rowWith(s,'Follow up '+esc(fmtIso(L(s.id).next)));}).join(''):'<div class="empty">Nothing is due. Set a follow-up date on a lead and it shows here on that day.</div>';
+  $('#pl-recent').innerHTML=recent.length?recent.slice(0,15).map(function(s){var l=L(s.id);return rowWith(s,esc(l.by||'')+', '+esc(fmtWhen(l.upd)));}).join(''):'<div class="empty">No updates yet. Changes the salesmen make in the field show up here as they happen.</div>';
+}
+
+/* lead sheet */
+function closeSheet(){$('#overlay').classList.remove('on');openId=null;}
+function openLead(id){
+  var s=BY.get(id);if(!s)return;var l=L(id),st=l.st||'new';openId=id;
+  var facts=[KIND[s.k]+(s.sub?' ('+s.sub+')':'')];if(s.u>1&&s.k!=='RM')facts.push(s.u+' homes under construction');if(s.f)facts.push(finishIn(s)<0?'Estimated finish has passed (around '+finishText(s)+'), so it may be done or running late. This is an estimate from the permit date and the size of the job':'Expected to finish around '+finishText(s)+' (an estimate from the permit date and the size of the job)');if(s.sq)facts.push(s.sq.toLocaleString()+' sq ft'+(s.u>1?' in total':''));if(s.c)facts.push(fmtMoney(s.c)+' stated cost');if(s.k==='GO'&&s.x)facts.push(s.x);if(s.d)facts.push((s.k==='FS'?'Added ':'Permit issued ')+fmtD8(s.d));if(s.la)facts.push(Math.round(s.dist*1.3)+' miles from Weddington');
+  var sat=s.la?'https://www.google.com/maps/@?api=1&map_action=map&center='+s.la+','+s.lo+'&zoom=19&basemap=satellite':'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(s.a+', NC');
+  var notes=(l.notes||[]).slice().reverse();
+  var h='<div class="sheet-head"><div><h2 id="sh-title">'+esc(s.n||s.a)+'</h2><p class="row-sub">'+esc(s.a)+(s.z?' '+esc(s.z):'')+'</p></div><button class="btn sm" type="button" data-sh="close">Close</button></div>';
+  h+='<ul class="facts">'+facts.map(function(f){return '<li>'+esc(f)+'</li>';}).join('')+'</ul>';
+  if(s.k==='RM'&&s.x)h+='<p class="row-sub">'+esc(s.x)+'</p>';
+  if(s.o)h+=s.k==='GO'?'<p class="row-sub">Office phone: <a href="tel:'+esc(s.o.replace(/[^0-9+]/g,''))+'">'+esc(s.o)+'</a></p>':'<p class="row-sub">'+(s.k==='RM'?'Builder or owner on the permits: ':'Property owner on the permit: ')+esc(s.o)+'</p>';
+  if(/^(COM|RES|CAB)-/.test(s.id))h+='<p class="row-sub">Permit number: '+esc(s.id.replace(/^CAB-/,''))+'</p>';
+  h+='<div class="btns"><a class="btn sm" href="'+esc('https://www.google.com/maps/dir/?api=1&destination='+mapPt(s)+'&travelmode=driving')+'" target="_blank" rel="noopener">Directions</a><a class="btn sm" href="'+esc(sat)+'" target="_blank" rel="noopener">Satellite view</a></div>';
+  h+='<div class="card"><div class="grid">'
+    +'<label class="f" for="sh-stage">Stage<select id="sh-stage">'+STAGES.map(function(x){return '<option value="'+x[0]+'"'+(x[0]===st?' selected':'')+'>'+esc(x[1])+'</option>';}).join('')+'</select></label>'
+    +'<label class="f" for="sh-rep">Assigned to<select id="sh-rep"><option value="">Unassigned</option>'+CFG.reps.map(function(n,i){return '<option value="'+i+'"'+(l.rep===i?' selected':'')+'>'+esc(n)+'</option>';}).join('')+'</select></label>'
+    +'<label class="f" for="sh-gc">General contractor or builder<input id="sh-gc" maxlength="80" autocomplete="off" value="'+esc(l.gc||'')+'"></label>'
+    +'<label class="f" for="sh-cn">Contact name<input id="sh-cn" maxlength="60" autocomplete="off" value="'+esc(l.cn||'')+'"></label>'
+    +'<label class="f" for="sh-ph">Phone<input id="sh-ph" type="tel" maxlength="30" autocomplete="off" value="'+esc(l.ph||'')+'"></label>'
+    +'<label class="f" for="sh-em">Email<input id="sh-em" type="email" maxlength="80" autocomplete="off" value="'+esc(l.em||'')+'"></label>'
+    +'<label class="f" for="sh-next">Follow up on<input id="sh-next" type="date" value="'+esc(l.next||'')+'"></label>'
+    +'</div><label class="f" for="sh-note">Add a note<textarea id="sh-note" maxlength="600" placeholder="Who you spoke to, what they said, what happens next"></textarea></label>'
+    +'<div class="btns"><button class="btn primary" type="button" data-sh="save">Save</button></div></div>';
+  h+='<div class="card"><h2>Put on a route</h2><div class="grid"><label class="f" for="sh-rt-rep">Salesman<select id="sh-rt-rep">'+CFG.reps.map(function(n,i){return '<option value="'+i+'"'+(String(i)===$('#rt-rep').value?' selected':'')+'>'+esc(n)+'</option>';}).join('')+'</select></label><label class="f" for="sh-rt-date">Day<input id="sh-rt-date" type="date" value="'+esc($('#rt-date').value||todayStr())+'"></label></div><div class="btns"><button class="btn" type="button" data-sh="route">Add to that route</button></div></div>';
+  h+='<div class="card"><h2>History</h2>'+(notes.length?notes.map(function(n){return '<div class="note"><time>'+esc(fmtWhen(n.t))+' · '+esc(n.by||'')+'</time>'+esc(n.x)+'</div>';}).join(''):'<p class="row-sub">No notes yet.</p>')+'</div>';
+  $('#sheet').innerHTML=h;$('#overlay').classList.add('on');$('#sheet').scrollTop=0;
+}
+function sheetClick(e){
+  var t=e.target.closest('[data-sh]');if(!t||!openId)return;var id=openId,l=L(id),act=t.dataset.sh;
+  if(act==='close'){closeSheet();return;}
+  if(act==='save'){
+    var old=l.st||'new',st=$('#sh-stage').value,rv=$('#sh-rep').value,rep=rv===''?null:+rv;
+    if(rep===null&&st!=='new'&&ME!=='office')rep=+ME;
+    var patch={st:st,rep:rep,gc:$('#sh-gc').value.trim(),cn:$('#sh-cn').value.trim(),ph:$('#sh-ph').value.trim(),em:$('#sh-em').value.trim(),next:$('#sh-next').value||''};
+    var notes=(l.notes||[]).slice(),txt=$('#sh-note').value.trim(),now=Date.now();
+    if(st!==old)notes.push({t:now,by:meName(),x:'Stage changed from '+STAGE_NAME[old]+' to '+STAGE_NAME[st]+'.'});
+    if(txt)notes.push({t:now,by:meName(),x:txt});
+    patch.notes=notes.slice(-40);
+    closeSheet();saveLead(id,patch);toast('Saved.');return;
+  }
+  if(act==='route'){
+    var key=$('#sh-rt-date').value+'_r'+$('#sh-rt-rep').value,r=ROUTES.get(key);
+    if(!$('#sh-rt-date').value){toast('Pick a day first.');return;}
+    if(r&&r.ids.indexOf(id)>=0){toast('Already on that route.');return;}
+    var data=r?Object.assign({},r,{ids:r.ids.concat([id])}):{date:$('#sh-rt-date').value,rep:+$('#sh-rt-rep').value,ids:[id],per:15,made:Date.now(),by:meName()};
+    saveRoute(key,data);toast('Added to '+repName($('#sh-rt-rep').value)+'’s route.');
+  }
+}
+
+/* add a site */
+function addSite(e){
+  e.preventDefault();
+  var name=$('#ad-name').value.trim(),addr=$('#ad-addr').value.trim();
+  if(!name&&!addr){toast('Enter a name or an address for the site.');return;}
+  var llText=$('#ad-ll').value.trim(),ll=parseLL(llText);
+  if(llText&&!ll){toast('That map pin does not look like two map numbers. Fix it or clear it.');return;}
+  var town=$('#ad-town').value,d=todayStr().replace(/-/g,''),id='F-'+Date.now().toString(36)+Math.floor(Math.random()*1296).toString(36);
+  var fullAddr=addr+(town!=='Other'&&addr.toLowerCase().indexOf(town.toLowerCase())<0?(addr?' ':'')+town:'');
+  var note=$('#ad-note').value.trim(),st=$('#ad-stage').value;
+  var doc={st:st,rep:ME==='office'?null:+ME,gc:$('#ad-gc').value.trim(),cn:$('#ad-cn').value.trim(),ph:$('#ad-ph').value.trim(),em:'',next:'',
+    site:{n:name||addr,a:fullAddr,town:town,sub:$('#ad-sub').value,sq:+$('#ad-sq').value||0,la:ll?ll.la:0,lo:ll?ll.lo:0,d:d},
+    notes:[{t:Date.now(),by:meName(),x:'Added from the field.'+(note?' '+note:'')}]};
+  saveLead(id,doc);$('#add-form').reset();$('#ad-town').value='Charlotte';$('#ad-stage').value='visited';
+  toast(db?'Site added to the shared list.':'Site added on this device.');
+}
+
+/* navigation and wiring */
+var VIEWS=['routes','leads','pipeline','add-site'];
+function showView(){var v=(location.hash||'').replace('#','');if(VIEWS.indexOf(v)<0)v='routes';VIEWS.forEach(function(n){$('#v-'+n).classList.toggle('on',n===v);});document.querySelectorAll('.tabs a').forEach(function(a){var on=a.dataset.view===v;a.classList.toggle('on',on);if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});if(v==='routes')renderRoutes();}
+function renderAll(){renderLeads();renderRoutes();renderPipeline();}
+
+function wire(){
+  window.addEventListener('hashchange',showView);
+  $('#me').addEventListener('change',function(){ME=this.value;store.set('bf_me',ME);if(ME!=='office'){$('#rt-rep').value=ME;renderRoutes();}});
+  ['#rt-rep','#rt-date'].forEach(function(s){$(s).addEventListener('change',function(){PREVIEW=null;armed=null;renderRoutes();});});
+  $('#rt-build').addEventListener('click',buildPreview);
+  $('#zn-make').addEventListener('click',function(){if(ZONES&&armed!=='zones'){armed='zones';renderZones();setTimeout(function(){if(armed==='zones'){armed=null;renderZones();}},4000);}else{var b=this;b.textContent='Working out the best split…';b.disabled=true;setTimeout(function(){b.disabled=false;splitAreas();renderZones();},40);}});
+  $('#zn-list').addEventListener('click',function(e){var t=e.target.closest('[data-zone]');if(t)openZone(+t.dataset.zone);});
+  $('#rt-saved').addEventListener('click',function(e){routeClick(e,false);});
+  $('#rt-preview').addEventListener('click',function(e){routeClick(e,true);});
+  ['#ld-q','#ld-stage','#ld-kind','#ld-town','#ld-rep','#ld-sort'].forEach(function(s){$(s).addEventListener(s==='#ld-q'?'input':'change',function(){LIMIT=40;renderLeads();});});
+  $('#ld-more').addEventListener('click',function(){LIMIT+=40;renderLeads();});
+  ['#ld-list','#pl-due','#pl-recent'].forEach(function(s){$(s).addEventListener('click',function(e){var t=e.target.closest('[data-open]');if(t)openLead(t.dataset.open);});});
+  $('#sheet').addEventListener('click',sheetClick);
+  $('#overlay').addEventListener('click',function(e){if(e.target===this)closeSheet();});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&openId)closeSheet();});
+  $('#add-form').addEventListener('submit',addSite);
+  $('#cf-save').addEventListener('click',function(){var a=$('#cf-r0').value.trim()||'Salesman 1',b=$('#cf-r1').value.trim()||'Salesman 2';CFG=Object.assign({},CFG,{reps:[a,b]});saveCfg();toast('Names saved.');});
+  window.addEventListener('resize',function(){clearTimeout(wire.tm);wire.tm=setTimeout(renderRoutes,200);});
+}
+
+var ZDOC=null,ACCT=null;
+function pickZones(){ZONES=(ZDOC&&Array.isArray(ZDOC.list)&&!staleBuiltin(ZDOC,DEFAULT_ZONES))?ZDOC:DEFAULT_ZONES;renderZones();}
+async function loadSites(){rebuild();fillTowns();renderAll();}
+async function connect(){
+  setConn('','Sign in to load the team’s data');
+  ACCT=await window.BFREADY;db=ACCT.db;
+  $('#acct-email').textContent=ACCT.email;$('#acct').hidden=false;
+  $('#acct-out').addEventListener('click',function(){ACCT.signOut();});
+  window.BF_onWriteError=function(e){toast((e&&e.code==='permission-denied')?'That change was refused. This sign-in is not on the team list.':'That change did not save ('+((e&&e.code)||'error')+'). Check your signal and try again.');};
+  setConn('','Connecting…');
+  var live=false,slow=setTimeout(function(){if(!live)setConn('local','No signal. Changes are kept and sent later');},10000);
+  function ok(meta){if(meta&&!meta.fromCache){live=true;clearTimeout(slow);setConn('live','Live, shared with the team');}}
+  function bad(e){clearTimeout(slow);setConn('err',(e&&e.code==='permission-denied')?'This sign-in is not on the team list':'Shared data unavailable');}
+  window.addEventListener('offline',function(){setConn('local','No signal. Changes are kept and sent later');});
+  window.addEventListener('online',function(){if(live)setConn('live','Live, shared with the team');});
+  db.doc('data/sites').onSnapshot(function(s){var t=s.exists?String((s.data()||{}).text||''):'';var bb=s.exists?(s.data()||{}).base:null;if(bb&&+bb.la&&+bb.lo){BASE.la=+bb.la;BASE.lo=+bb.lo;BASE.n=String(bb.n||'Home base');BASE.a=String(bb.a||'');}SITES=t?parseSites(t):[];sitesState=t?'ready':'failed';rebuild();fillTowns();renderAll();renderZones();},bad);
+  db.doc('data/zones').onSnapshot(function(s){var t=s.exists?String((s.data()||{}).text||''):'';DEFAULT_ZONES=t?parseZones(t):null;pickZones();},function(){});
+  db.collection('leads').onSnapshot(function(snap){ok(snap.metadata);var m=new Map();snap.docs.forEach(function(x){m.set(x.id,x.data());});LEADS=m;rebuild();renderAll();},bad);
+  db.collection('routes').onSnapshot(function(snap){var m=new Map();snap.docs.forEach(function(x){m.set(x.id,x.data());});ROUTES=m;renderRoutes();},bad);
+  db.doc('zones/main').onSnapshot(function(s){ZDOC=s.exists?s.data():null;pickZones();},function(){});
+  db.doc('config/main').onSnapshot(function(s){if(s.exists){var c=s.data();if(c&&Array.isArray(c.reps)&&c.reps.length){CFG={reps:c.reps.slice(0,2).map(String)};fillReps();renderAll();}}},function(){});
+}
+
+ME=store.get('bf_me')||'office';
+fillStatic();fillReps();if(ME!=='office')$('#rt-rep').value=ME;wire();showView();renderAll();
+loadSites();connect();
+})();
+</script>
+<script src="config.js"></script>
+<script type="module" src="bf-auth.js"></script>
+</body>
+</html>
