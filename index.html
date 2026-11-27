@@ -187,7 +187,17 @@ setTimeout(function(){if(!window.BF_AUTH_LOADED){var m=document.getElementById('
 
 <main>
   <section class="view" id="v-routes">
-    <h1>Daily routes</h1>
+    <h1>Routes</h1>
+    <div class="card">
+      <h2>Numbered routes</h2>
+      <p class="lede">Every unvisited job site is split into numbered routes, each an area one salesman can finish in a day. Press Claim on the route you are taking. It becomes your checklist, and everyone on the team sees it is yours.</p>
+      <div class="count" id="zn-sum"></div>
+      <canvas class="map" id="zn-map" style="height:380px" hidden role="img" aria-label="Sketch of the numbered routes. H is home base; each numbered outline is one route."></canvas>
+      <div class="list zlist" id="zn-list"></div>
+      <p class="fine">Splitting again redraws every route from the sites nobody has visited yet, starting and ending at home base, with the fewest total miles. It uses the hours, minutes per stop and site types set under Plan a single day below. Routes already claimed keep their stops.</p>
+      <div class="btns"><button class="btn" id="zn-make" type="button">Split into numbered routes</button></div>
+    </div>
+    <h2>Plan a single day</h2>
     <div class="grid">
       <label class="f" for="rt-rep">Salesman<select id="rt-rep"></select></label>
       <label class="f" for="rt-date">Day<input type="date" id="rt-date"></label>
@@ -213,14 +223,6 @@ setTimeout(function(){if(!window.BF_AUTH_LOADED){var m=document.getElementById('
       <div class="btns"><button class="btn primary" id="rt-build" type="button">Build route</button></div>
       <div id="rt-preview"></div>
       <p class="fine">Drive times are estimates from map distance, not live traffic. Open the stops in Google Maps for real directions.</p>
-    </div>
-    <div class="card">
-      <h2>Numbered routes</h2>
-      <p class="lede">Splits every unvisited job site into numbered routes, each an area one salesman can finish in a day, starting and ending at home base, choosing the split with the fewest total miles. It uses the hours, minutes per stop and site types chosen above. Everyone on the team sees the same numbered routes.</p>
-      <div class="btns"><button class="btn primary" id="zn-make" type="button">Split into numbered routes</button></div>
-      <div class="count" id="zn-sum"></div>
-      <canvas class="map" id="zn-map" style="height:380px" hidden role="img" aria-label="Sketch of the numbered routes. H is home base; each numbered outline is one route."></canvas>
-      <div class="list zlist" id="zn-list"></div>
     </div>
   </section>
 
@@ -775,7 +777,7 @@ function renderZoneList(){
     var head='';if(z.w>=0&&z.w!==lastW){lastW=z.w;head='<div class="zhead" style="font-weight:600;margin:14px 0 4px">'+esc(WLAB[z.w]||'')+'</div>';}
     return head+'<div class="zrow'+(cb.mine?' mine':'')+'"><span class="sw" style="background:'+ZCOL[(z.n-1)%ZCOL.length]+'"></span><span class="row-main" style="flex:1"><span class="row-title">Route '+(+z.n)+(town?' · '+esc(town):'')+'</span><span class="row-meta">'+stops.length+' stops · about '+fmtDur(st.total)+' · '+(left?left+' not yet visited':'all visited')+(sc?' · scheduled '+esc(fmtIso(sc.date))+', '+esc(repName(sc.rep)):'')+cb.meta+'</span></span><span class="zbtns">'+cb.btn+'<button class="btn sm" type="button" data-zone="'+(+z.n)+'">Plan a day</button></span></div>';
   }).join('');
-  sum.textContent=ZONES.list.length+' numbered routes, each about one '+fmtDur((+ZONES.hours||6)*60)+' day for one salesman. '+open+' still have unvisited sites, which is about '+Math.ceil(open/2)+' working days with two salesmen.'+(ZONES.miles?' About '+(+ZONES.miles).toLocaleString()+' miles of driving in total.':'')+(ZONES.list[0].w>=0?' They are numbered by what is expected to finish soonest.':'')+' Split on '+fmtWhen(ZONES.made)+'.'+(taken?' '+taken+' claimed so far.':' None are claimed yet: press Claim on the one you are taking.');
+  sum.textContent=ZONES.list.length+' numbered routes, each about one '+fmtDur((+ZONES.hours||6)*60)+' day for one salesman. '+open+' still have unvisited sites, which is about '+Math.ceil(open/2)+' working days with two salesmen.'+(ZONES.miles?' About '+(+ZONES.miles).toLocaleString()+' miles of driving in total.':'')+(ZONES.list[0].w>=0?' They are numbered by what is expected to finish soonest.':'')+' Split on '+fmtWhen(ZONES.made)+'.'+(taken?' '+taken+' claimed so far.':' None are claimed yet.');
   drawZoneMap();
 }
 function drawZoneMap(){
@@ -797,7 +799,7 @@ function openZone(n){
   var stops=stopsOf(z.ids),left=stops.filter(function(s){return stageOf(s.id)==='new';});
   PREVIEW={ids:orderStops(left.length?left:stops).map(function(s){return s.id;}),per:+ZONES.per||15,zone:n,msg:''};renderPreview();
   var el=$('#rt-preview');if(el.scrollIntoView)el.scrollIntoView({block:'start'});
-  toast('Route '+n+' is ready. Pick the salesman and day at the top, then save.');
+  toast('Route '+n+' is loaded under Plan a single day. Pick the salesman and day there, then save.');
 }
 
 /* pipeline view */

@@ -103,7 +103,7 @@ th{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.
 .legend i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:-1px;border:1px solid #fff;box-shadow:0 0 0 1px #8894a8}
 .zrow{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:7px 8px}
 .sw{flex:none;width:14px;height:14px;border-radius:3px}
-.zlist{max-height:360px;overflow-y:auto}
+.zlist{max-height:min(58vh,520px);overflow-y:auto}
 .zrow.on{border-color:var(--action);box-shadow:inset 3px 0 0 var(--action)}
 .zrow.mine{border-color:var(--good)}
 .zbtns{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;flex:none;max-width:48%}
@@ -216,6 +216,16 @@ setTimeout(function(){if(!window.BF_AUTH_LOADED){var m=document.getElementById('
     </section>
 
     <section class="panel" id="p-route">
+      <div class="card">
+        <h2>Numbered routes</h2>
+        <p class="lede">The unvisited sites are split into numbered routes, each an area one salesman can finish in a day. Press Claim or Assign on a route to give it to a salesman. It becomes his checklist, and everyone on the team sees whose it is.</p>
+        <div class="btns"><label class="check" for="zn-show"><input type="checkbox" id="zn-show" checked>Show route areas on the map</label></div>
+        <div class="count" id="zn-sum"></div>
+        <div class="list zlist" id="zn-list"></div>
+        <p class="fine">Splitting again redraws every route from the unvisited sites showing on the map, starting and ending at home base, with the fewest total miles. It uses the hours and minutes per stop set under Plan a single day below. Routes already claimed keep their stops.</p>
+        <div class="btns"><button class="btn" type="button" id="zn-make">Split the map into numbered routes</button></div>
+      </div>
+      <h2>Plan a single day</h2>
       <div class="grid">
         <label class="f" for="rt-rep">Salesman<select id="rt-rep"></select></label>
         <label class="f" for="rt-date">Day<input type="date" id="rt-date"></label>
@@ -236,13 +246,6 @@ setTimeout(function(){if(!window.BF_AUTH_LOADED){var m=document.getElementById('
           <button class="btn" type="button" id="rt-clear">Clear</button>
         </div>
         <div class="btns" id="rt-links"></div>
-      </div>
-      <div class="card">
-        <h2>Numbered routes</h2>
-        <p class="lede">Splits the unvisited sites showing on the map into numbered routes, each an area one salesman can finish in a day, starting and ending at home base, choosing the split with the fewest total miles. It uses the hours and minutes per stop set above.</p>
-        <div class="btns"><button class="btn primary" type="button" id="zn-make">Split the map into numbered routes</button><label class="check" for="zn-show"><input type="checkbox" id="zn-show" checked>Show route areas on the map</label></div>
-        <div class="count" id="zn-sum"></div>
-        <div class="list zlist" id="zn-list"></div>
       </div>
       <h2>Scheduled routes</h2>
       <div class="list" id="rt-savedlist"></div>
@@ -847,7 +850,7 @@ function openZone(n){
   var stops=stopsOf(z.ids),left=stops.filter(function(s){return stageOf(s.id)==='new';});
   WORK=orderStops(left.length?left:stops).map(function(s){return s.id;});WORKZONE=n;showTab('route');renderRoute();
   var pts=stopsOf(WORK).filter(function(s){return s.la;});if(map&&pts.length)map.fitBounds(L.latLngBounds(pts.map(function(s){return [s.la,s.lo];})),{padding:[60,60]});
-  toast('Route '+n+' is loaded. Pick the salesman and day, then save.');
+  toast('Route '+n+' is loaded under Plan a single day. Pick the salesman and day, then save.');
 }
 
 /* pipeline */
