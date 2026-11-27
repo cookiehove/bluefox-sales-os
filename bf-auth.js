@@ -46,7 +46,17 @@ if (!cfg.apiKey || !cfg.projectId) {
     },
     collection(path) {
       const c = collection(fs, path);
-      return { onSnapshot: (next, bad) => onSnapshot(c, (s) => next({ docs: s.docs.map((x) => ({ id: x.id, data: () => x.data() })), metadata: s.metadata }), bad || (() => {})) };
+      // Also hear when the server has confirmed what the device already had saved, so the page can say "Live".
+      // Updates that change nothing the page shows are skipped.
+      return { onSnapshot: (next, bad) => {
+        let first = true, lastCache = null;
+        return onSnapshot(c, { includeMetadataChanges: true }, (s) => {
+          const fc = s.metadata.fromCache;
+          if (!first && fc === lastCache && s.docChanges().length === 0) return;
+          first = false; lastCache = fc;
+          next({ docs: s.docs.map((x) => ({ id: x.id, data: () => x.data() })), metadata: s.metadata });
+        }, bad || (() => {}));
+      } };
     },
   };
 
