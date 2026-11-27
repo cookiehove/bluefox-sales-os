@@ -121,6 +121,7 @@ th{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.
 .ck-head{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}
 .ck-note{display:block;font-size:12.5px;color:var(--ink);background:#fff7dc;border-left:3px solid #d9a400;border-radius:0 6px 6px 0;padding:3px 7px;margin-top:3px;overflow-wrap:anywhere}
 .ck-more{color:var(--muted)}
+.tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
 .ck-panel{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:8px}
 .ck-lab{font-size:12.5px;font-weight:600;color:var(--muted)}
 .chips{display:flex;flex-wrap:wrap;gap:5px}
@@ -259,6 +260,11 @@ setTimeout(function(){if(!window.BF_AUTH_LOADED){var m=document.getElementById('
         <label class="f" for="ck-who">Show<select id="ck-who"></select></label>
         <div class="list" id="ck-claims"></div>
       </div>
+      <div class="card">
+        <h2>Follow-ups and walkthroughs</h2>
+        <p class="lede">Every follow-up date and walkthrough set on a stop, soonest first. It follows the Show choice above.</p>
+        <div class="list" id="ck-agenda"></div>
+      </div>
       <div class="card" id="ck-open" hidden></div>
     </section>
 
@@ -364,7 +370,12 @@ var QUICK=['Nobody on site','Left a card','Met the superintendent','Got the cont
 var IN_PLAY=['contact','bidlist','walk_sched','walk_done','quoted'];
 function cfgFrom(c){return {reps:(c.reps||[]).slice(0,2).map(String),office:String((c&&c.office)||'').slice(0,30)};}
 function claimId(made,n){return 'c_'+(Math.round(+made)||0)+'_'+(+n);}
-function realNote(n){return !!(n&&n.x)&&!/^Stage changed from /.test(n.x)&&n.x!=='Added by hand.';}
+function realNote(n){return !!(n&&n.x)&&!/^(Stage changed from |Follow-up set for |Follow-up cleared\.|Walkthrough set for |Walkthrough date cleared\.)/.test(n.x)&&n.x!=='Added by hand.';}
+/* a walkthrough is kept on the lead as a date with an optional time, like 2026-12-05T10:00 */
+function fmtWalk(w,fmtIso){if(!w)return '';var d=String(w).slice(0,10),t=String(w).slice(11,16),o=fmtIso(d);if(t){var h=+t.slice(0,2),ap=h<12?'AM':'PM';h=h%12||12;o+=', '+h+':'+t.slice(3,5)+' '+ap;}return o;}
+function joinWalk(d,t){return d?(d+(t?'T'+t:'')):'';}
+function dateLines(l,next,wk,fmtIso){var out=[];if(next!==(l.next||''))out.push(next?'Follow-up set for '+fmtIso(next)+'.':'Follow-up cleared.');if(wk!==(l.wk||''))out.push(wk?'Walkthrough set for '+fmtWalk(wk,fmtIso)+'.':'Walkthrough date cleared.');return out;}
+var EARLY=['new','visited','contact','bidlist'],CLOSED=['won','lost','skip'];
 function lastNote(l){var ns=(l&&l.notes)||[];for(var i=ns.length-1;i>=0;i--)if(realNote(ns[i]))return ns[i];return null;}
 function claimIndex(claims,zones,isOpen){
   /* stop: which claim each stop sits in (the newest claim wins). route: the claim on each current numbered route: the one made on that very route, or else the one holding at least half of its stops still to do. num: the current number of a claimed route. */
@@ -379,8 +390,18 @@ function claimIndex(claims,zones,isOpen){
   return {stop:stop,route:route,num:num};
 }
 function makeBoard(H){
-  var $=H.$,esc=H.esc,S={open:null,stop:null,draft:'',who:null,show:'all',limit:40,arm:null,assign:null},idx={stop:{},route:{},num:{}},zoneNum={};
+  var $=H.$,esc=H.esc,S={open:null,stop:null,draft:'',dnext:null,dwk:null,dwkt:null,who:null,show:'all',limit:40,arm:null,assign:null,agAll:false},idx={stop:{},route:{},num:{}},zoneNum={};
   function claims(){return H.claims();}
+  function clearDraft(){S.draft='';S.dnext=null;S.dwk=null;S.dwkt=null;}
+  /* the dates showing in the open stop: what was typed but not saved yet, else what is on the lead */
+  function pend(l){return {next:S.dnext!==null?S.dnext:(l.next||''),wk:joinWalk(S.dwk!==null?S.dwk:String(l.wk||'').slice(0,10),S.dwkt!==null?S.dwkt:String(l.wk||'').slice(11,16))};}
+  function unsaved(id){var l=H.lead(id),p=pend(l);return !!S.draft.trim()||p.next!==(l.next||'')||p.wk!==(l.wk||'');}
+  function dateTags(l){
+    var st=l.st||'new',today=H.todayStr(),h='';
+    if(l.wk){var d=String(l.wk).slice(0,10),was=st==='walk_done';if(was||CLOSED.indexOf(st)<0)h+='<span class="pill t-'+(was?'neutral':(d<today?'bad':'good'))+'">'+(was?'Walked ':(d<today?'Walkthrough was ':'Walkthrough '))+esc(fmtWalk(l.wk,H.fmtIso))+'</span>';}
+    if(l.next&&CLOSED.indexOf(st)<0)h+='<span class="pill t-'+(l.next<today?'bad':(l.next===today?'warn':'info'))+'">'+(l.next<today?'Follow-up overdue, ':(l.next===today?'Follow up today, ':'Follow up '))+esc(H.fmtIso(l.next))+'</span>';
+    return h?'<span class="tags">'+h+'</span>':'';
+  }
   function put(el,html){if(!el)return false;if(el._bh===html)return false;el._bh=html;el.innerHTML=html;return true;}
   function isOpen(x){return H.stageOf(x)==='new';}
   /* the stops of a route nobody has done yet and nobody holds on a checklist: what the next person to claim it gets */
@@ -423,14 +444,14 @@ function makeBoard(H){
     var free=freeOf(r);if(!free.length){H.toast('Every stop on Route '+n+' is already done or on someone’s checklist.');H.redrawZones();return;}
     var stops=H.stopsOf(free),tc={},town='';stops.forEach(function(s){tc[s.town]=(tc[s.town]||0)+1;if(!town||tc[s.town]>tc[town])town=s.town;});
     var key=claimId(z.made,n);
-    S.assign=null;S.open=key;S.stop=null;S.draft='';S.arm=null;
+    S.assign=null;S.open=key;S.stop=null;clearDraft();S.arm=null;
     H.saveClaim(key,{rep:rep,at:Date.now(),by:H.meName(),n:n,made:z.made||0,town:town,ids:free});
     H.toast('Route '+n+' now belongs to '+H.repName(rep)+'. Its checklist is open.');
     H.showChecklist();if(H.onOpenRoute)H.onOpenRoute(stops);
   }
   function openClaim(k,go){
-    if(S.stop&&S.draft.trim())saveNote(S.stop,true);
-    S.open=k;S.stop=null;S.draft='';S.arm=null;if(go)H.showChecklist();render();
+    if(S.stop&&unsaved(S.stop))saveStop(S.stop,true);
+    S.open=k;S.stop=null;clearDraft();S.arm=null;if(go)H.showChecklist();render();
     var c=claims().get(k);if(c&&H.onOpenRoute)H.onOpenRoute(H.stopsOf(c.ids));
     var el=$('#ck-open');if(el&&el.scrollIntoView)el.scrollIntoView({block:'start'});
   }
@@ -471,19 +492,39 @@ function makeBoard(H){
       var l=H.lead(s.id),st=l.st||'new',done=st!=='new',open=S.stop===s.id,nm=esc(s.n||s.a);
       if(!open&&((S.show==='todo'&&done)||(S.show==='done'&&!done)))return '';
       var r='<li class="ck'+(done?' done':'')+'"><div class="ck-top"><button type="button" class="ck-tick" data-tick="'+esc(s.id)+'" role="checkbox" aria-checked="'+(done?'true':'false')+'" aria-label="Visited: '+nm+'">'+(done?'✓':'')+'</button>'
-        +'<button type="button" class="ck-main" data-ck="'+esc(s.id)+'" aria-expanded="'+(open?'true':'false')+'"><span class="stop-txt"><span class="ck-head"><span class="row-title">'+(i+1)+'. '+nm+'</span>'+H.pill(s.id)+'</span><span class="row-sub">'+esc(s.a)+(s.z?' '+esc(s.z):'')+(l.gc?' · '+esc(l.gc):'')+'</span><span class="row-meta">'+H.metaLine(s)+'</span>'+noteLine(l)+'</span></button></div>';
+        +'<button type="button" class="ck-main" data-ck="'+esc(s.id)+'" aria-expanded="'+(open?'true':'false')+'"><span class="stop-txt"><span class="ck-head"><span class="row-title">'+(i+1)+'. '+nm+'</span>'+H.pill(s.id)+'</span><span class="row-sub">'+esc(s.a)+(s.z?' '+esc(s.z):'')+(l.gc?' · '+esc(l.gc):'')+'</span><span class="row-meta">'+H.metaLine(s)+'</span>'+dateTags(l)+noteLine(l)+'</span></button></div>';
       if(open){
         r+='<div class="ck-panel"><div class="ck-lab">Where it stands (pick one, it saves straight away)</div><div class="chips" role="group" aria-label="Where it stands">'
           +STAGES.map(function(x){var on=x[0]===st;return '<button type="button" class="chip'+(on?' on':'')+'" data-st="'+x[0]+'" aria-pressed="'+(on?'true':'false')+'">'+esc(x[0]==='new'?'Not visited yet':x[1])+'</button>';}).join('')+'</div>'
+          +'<div class="grid"><label class="f" for="ck-next">Follow up on<input id="ck-next" type="date" value="'+esc(l.next||'')+'"></label><label class="f" for="ck-wk">Walkthrough date<input id="ck-wk" type="date" value="'+esc(String(l.wk||'').slice(0,10))+'"></label><label class="f" for="ck-wkt">Walkthrough time<input id="ck-wkt" type="time" value="'+esc(String(l.wk||'').slice(11,16))+'"></label></div>'
           +'<label class="f" for="ck-note">Note<textarea id="ck-note" maxlength="600" placeholder="Who you spoke to, what they said, what happens next"></textarea></label>'
           +'<div class="ck-lab">Quick notes (tap to drop into the note)</div><div class="chips" role="group" aria-label="Quick notes">'+QUICK.map(function(q,j){return '<button type="button" class="chip q" data-q="'+j+'">'+esc(q)+'</button>';}).join('')+'</div>'
-          +'<div class="btns"><button class="'+H.sm+' primary" type="button" data-cksave="'+esc(s.id)+'">Save note</button><a class="'+H.sm+'" href="'+esc('https://www.google.com/maps/dir/?api=1&destination='+mapPt(s)+'&travelmode=driving')+'" target="_blank" rel="noopener">Directions</a><button class="'+H.sm+'" type="button" data-open="'+esc(s.id)+'">All details</button></div></div>';
+          +'<div class="btns"><button class="'+H.sm+' primary" type="button" data-cksave="'+esc(s.id)+'">Save note and dates</button><a class="'+H.sm+'" href="'+esc('https://www.google.com/maps/dir/?api=1&destination='+mapPt(s)+'&travelmode=driving')+'" target="_blank" rel="noopener">Directions</a><button class="'+H.sm+'" type="button" data-open="'+esc(s.id)+'">All details</button></div></div>';
       }
       return r+'</li>';
     }).join('');
     h+=rows?'<ol class="list">'+rows+'</ol>':'<div class="empty">'+(S.show==='todo'?'Every stop on this route is done.':'Nothing is ticked yet.')+'</div>';
     if(can)h+='<div class="btns"><button class="'+H.sm+' danger" type="button" data-rel="'+esc(S.open)+'">'+(S.arm==='rel'?'Tap again to give this route up':'Give this route up')+'</button></div><p class="fine">Giving a route up takes the stops already done off it, so whoever claims it next only gets what is left. The ticks and notes stay on those leads and in the master list.</p>';
-    if(put(box,h)){var ta=$('#ck-note');if(ta&&S.stop){ta.value=S.draft;if(foc&&ta.focus){ta.focus();try{ta.setSelectionRange(pos,pos);}catch(e){}}}}
+    if(put(box,h)){var ta=$('#ck-note');if(ta&&S.stop){ta.value=S.draft;if(foc&&ta.focus){ta.focus();try{ta.setSelectionRange(pos,pos);}catch(e){}}
+      [['#ck-next',S.dnext],['#ck-wk',S.dwk],['#ck-wkt',S.dwkt]].forEach(function(p){var el=$(p[0]);if(el&&p[1]!==null)el.value=p[1];});}}
+  }
+  function renderAgenda(){
+    var box=$('#ck-agenda');if(!box)return;
+    var me=H.me(),who=S.who,today=H.todayStr(),items=[];
+    H.leads().forEach(function(l,id){
+      var s=H.site(id);if(!s||(!l.next&&!l.wk))return;var st=l.st||'new';if(CLOSED.indexOf(st)>=0)return;
+      var k=idx.stop[id],c=k&&claims().get(k),own=(l.rep!==null&&l.rep!==undefined)?l.rep:(c?c.rep:null);
+      if(who==='mine'){if(me==='office'||own!==+me)return;}else if(who!=='all'&&own!==+who)return;
+      if(l.wk&&st!=='walk_done')items.push({d:String(l.wk).slice(0,10),t:String(l.wk).slice(11,16),w:1,s:s,l:l,own:own});
+      if(l.next)items.push({d:l.next,t:'',w:0,s:s,l:l,own:own});
+    });
+    items.sort(function(a,b){return (a.d+'T'+(a.t||'00:00')).localeCompare(b.d+'T'+(b.t||'00:00'));});
+    var late=items.filter(function(o){return o.d<today;}).length,show=S.agAll?items:items.slice(0,5);
+    put(box,items.length?show.map(function(o){
+      var s=o.s,l=o.l,tone=o.d<today?'bad':(o.d===today?'warn':(o.w?'good':'info'));
+      var tag=o.w?((o.d<today?'Walkthrough was ':'Walkthrough ')+fmtWalk(l.wk,H.fmtIso)):((o.d<today?'Follow-up overdue, ':(o.d===today?'Follow up today, ':'Follow up '))+H.fmtIso(o.d));
+      return '<button class="row" type="button" data-open="'+esc(s.id)+'"><span class="row-main" style="flex:1"><span class="tags"><span class="pill t-'+tone+'">'+esc(tag)+'</span>'+H.pill(s.id)+'</span><span class="row-title">'+esc(s.n||s.a)+'</span><span class="row-sub">'+esc(s.a)+(l.cn?' · '+esc(l.cn)+(l.ph?', '+esc(l.ph):''):'')+(o.own!==null&&who!=='mine'?' · '+esc(H.repName(o.own)):'')+'</span>'+noteLine(l)+'</span></button>';
+    }).join('')+(items.length>5?'<div class="btns"><button class="'+H.sm+'" type="button" data-agall="1">'+(S.agAll?'Show only the next 5':'Show all '+items.length+(late?' ('+late+' overdue)':''))+'</button></div>':''):'<div class="empty">No follow-ups or walkthroughs are set. Tap a stop on a checklist, set a follow-up date or a walkthrough date, and it shows here.</div>');
   }
   function tick(id){
     var l=H.lead(id),old=l.st||'new';
@@ -491,22 +532,28 @@ function makeBoard(H){
     else if(old==='visited'){H.saveLead(id,{st:'new',notes:stamp(l,old,'new','')});H.toast('Tick removed.');}
     else{S.stop=id;renderOpen();H.toast('This one is already at “'+STAGE_NAME[old]+'”. Change it with the buttons under it.');}
   }
-  function setStage(id,st){var l=H.lead(id),old=l.st||'new',txt=S.draft.trim();if(st===old&&!txt)return;S.draft='';var ta=$('#ck-note');if(ta)ta.value='';H.saveLead(id,{st:st,rep:ownerRep(id),notes:stamp(l,old,st,txt)});H.toast('Saved: '+(st==='new'?'Not visited yet':STAGE_NAME[st])+'.');}
-  function saveNote(id,quiet){
-    var l=H.lead(id),old=l.st||'new',txt=S.draft.trim();
-    if(!txt){if(!quiet)H.toast('Type a note first, or tap one of the quick notes.');return;}
-    var st=(old==='new'&&H.me()!=='office')?'visited':old;S.draft='';var ta=$('#ck-note');if(ta)ta.value='';
-    H.saveLead(id,{st:st,rep:ownerRep(id),notes:stamp(l,old,st,txt)});if(!quiet)H.toast(st!==old?'Note saved and the stop ticked as visited.':'Note saved.');
+  /* st0 is the stage just picked with a button, if any. Whatever note and dates are waiting in the open stop are saved with it. */
+  function saveStop(id,quiet,st0){
+    var l=H.lead(id),old=l.st||'new',txt=S.draft.trim(),p=pend(l),lines=dateLines(l,p.next,p.wk,H.fmtIso),st=st0||old;
+    if(!txt&&!lines.length){if(st0===old||!st0){if(!quiet&&!st0)H.toast('Nothing new to save. Type a note, tap a quick note or set a date first.');return;}}
+    if(!st0){if(p.wk&&p.wk!==(l.wk||'')&&EARLY.indexOf(old)>=0)st='walk_sched';else if(old==='new'&&H.me()!=='office')st='visited';}
+    var notes=(l.notes||[]).slice(),now=Date.now(),by=H.meName();
+    if(st!==old)notes.push({t:now,by:by,x:'Stage changed from '+STAGE_NAME[old]+' to '+STAGE_NAME[st]+'.'});
+    lines.forEach(function(x){notes.push({t:now,by:by,x:x});});
+    if(txt)notes.push({t:now,by:by,x:txt});
+    clearDraft();var ta=$('#ck-note');if(ta)ta.value='';
+    H.saveLead(id,{st:st,rep:ownerRep(id),next:p.next,wk:p.wk,notes:notes.slice(-40)});
+    if(!quiet)H.toast(st0?'Saved: '+(st==='new'?'Not visited yet':STAGE_NAME[st])+'.':(st!==old?'Saved. The stop now stands at “'+STAGE_NAME[st]+'”.':'Saved.'));
   }
   function ckClick(e){
     var t=e.target.closest('[data-tick],[data-ck],[data-st],[data-q],[data-cksave],[data-open],[data-rel]');if(!t)return;var d=t.dataset||{};
     if(d.open){H.openLead(d.open);return;}
-    if(d.rel){if(S.arm==='rel'){S.arm=null;var k=d.rel;S.open=null;S.stop=null;S.draft='';H.saveClaim(k,null);H.toast('Route given up. The stops still to do can be claimed by anyone.');}else{S.arm='rel';renderOpen();setTimeout(function(){if(S.arm==='rel'){S.arm=null;renderOpen();}},4000);}return;}
+    if(d.rel){if(S.arm==='rel'){S.arm=null;var k=d.rel;S.open=null;S.stop=null;clearDraft();H.saveClaim(k,null);H.toast('Route given up. The stops still to do can be claimed by anyone.');}else{S.arm='rel';renderOpen();setTimeout(function(){if(S.arm==='rel'){S.arm=null;renderOpen();}},4000);}return;}
     if(d.tick){tick(d.tick);return;}
-    if(d.ck){var was=S.stop;if(was&&S.draft.trim())saveNote(was,true);S.stop=was===d.ck?null:d.ck;S.draft='';renderOpen();if(S.stop&&H.onOpenStop)H.onOpenStop(S.stop);return;}
-    if(d.st&&S.stop){setStage(S.stop,d.st);return;}
+    if(d.ck){var was=S.stop;if(was&&unsaved(was))saveStop(was,true);S.stop=was===d.ck?null:d.ck;clearDraft();renderOpen();if(S.stop&&H.onOpenStop)H.onOpenStop(S.stop);return;}
+    if(d.st&&S.stop){saveStop(S.stop,false,d.st);return;}
     if(d.q!==undefined&&d.q!==null&&S.stop){var ta=$('#ck-note'),cur=ta?String(ta.value||''):S.draft,p=QUICK[+d.q]||'';S.draft=cur+(cur&&!/\s$/.test(cur)?' ':'')+p+'. ';if(ta)ta.value=S.draft;return;}
-    if(d.cksave){var t2=$('#ck-note');if(t2&&t2.value!==undefined&&S.stop===d.cksave)S.draft=String(t2.value||'');saveNote(d.cksave);return;}
+    if(d.cksave){var t2=$('#ck-note');if(t2&&t2.value!==undefined&&S.stop===d.cksave)S.draft=String(t2.value||'');saveStop(d.cksave);return;}
   }
 
   /* the master list: every lead anyone has worked, whichever route it is on */
@@ -523,7 +570,7 @@ function makeBoard(H){
       var st=l.st||'new',k=idx.stop[id]||'',c=k?claims().get(k):null,own=(l.rep!==null&&l.rep!==undefined)?l.rep:(c?c.rep:null);
       if(IN_PLAY.indexOf(st)>=0)play++;if(st==='won')won++;
       if(rp==='none'){if(own!==null)return;}else if(rp!==''&&String(own)!==rp)return;
-      if(stg==='active'){if(IN_PLAY.indexOf(st)<0)return;}else if(stg==='due'){if(!(l.next&&l.next<=today)||['won','lost','skip'].indexOf(st)>=0)return;}else if(stg&&st!==stg)return;
+      if(stg==='active'){if(IN_PLAY.indexOf(st)<0)return;}else if(stg==='due'){if(!(l.next&&l.next<=today)||CLOSED.indexOf(st)>=0)return;}else if(stg==='walk'){if(!l.wk||st==='walk_done'||CLOSED.indexOf(st)>=0)return;}else if(stg&&st!==stg)return;
       if(rt==='none'){if(k)return;}else if(rt&&k!==rt)return;
       if(q){var ln=lastNote(l),hay=(s.n+' '+s.a+' '+(s.o||'')+' '+(l.gc||'')+' '+(l.cn||'')+' '+(l.ph||'')+' '+(ln?ln.x:'')).toLowerCase();if(hay.indexOf(q)<0)return;}
       out.push({s:s,l:l,st:st,k:k,own:own});
@@ -543,27 +590,28 @@ function makeBoard(H){
       if(sort==='route'){var g=o.k||('z'+(zoneNum[s.id]!==undefined?zoneNum[s.id]:''));if(g!==lastG){lastG=g;var cc=o.k&&claims().get(o.k);head='<div class="zhead">'+esc(where)+(cc?' · '+esc(H.repName(cc.rep))+' · '+esc(progText(tally(H.stopsOf(cc.ids)))):'')+'</div>';}}
       else bits.push(esc(where));
       if(o.own!==null)bits.push(esc(H.repName(o.own)));
-      if(l.next)bits.push('follow up '+esc(H.fmtIso(l.next)));
       if(l.upd)bits.push('updated '+esc(H.fmtWhen(l.upd)));
-      return head+'<button class="row" type="button" data-open="'+esc(s.id)+'"><span class="row-main" style="flex:1"><span class="ck-head"><span class="row-title">'+esc(s.n||s.a)+'</span>'+H.pill(s.id)+'</span><span class="row-sub">'+esc(s.a)+(l.gc?' · '+esc(l.gc):'')+(l.cn?' · '+esc(l.cn)+(l.ph?', '+esc(l.ph):''):'')+'</span><span class="row-meta">'+bits.join(' · ')+'</span>'+noteLine(l)+'</span></button>';
+      return head+'<button class="row" type="button" data-open="'+esc(s.id)+'"><span class="row-main" style="flex:1"><span class="ck-head"><span class="row-title">'+esc(s.n||s.a)+'</span>'+H.pill(s.id)+'</span><span class="row-sub">'+esc(s.a)+(l.gc?' · '+esc(l.gc):'')+(l.cn?' · '+esc(l.cn)+(l.ph?', '+esc(l.ph):''):'')+'</span><span class="row-meta">'+bits.join(' · ')+'</span>'+dateTags(l)+noteLine(l)+'</span></button>';
     }).join(''):'<div class="empty">'+(all?'No worked leads match those choices.':'Nothing has been worked yet. As soon as anyone ticks a stop, picks a stage or saves a note, the lead shows up here for the whole team.')+'</div>');
     $('#ms-more').hidden=out.length<=S.limit;
   }
   function where(id){var k=idx.stop[id],c=k&&claims().get(k);if(c)return 'On '+label(k)+', claimed by '+H.repName(c.rep);return zoneNum[id]!==undefined?'On Route '+(+zoneNum[id])+(idx.route[zoneNum[id]]?'':', not claimed yet'):'';}
-  function render(){begin();renderClaims();renderOpen();renderMaster();}
+  function render(){begin();renderClaims();renderAgenda();renderOpen();renderMaster();}
   function wire(){
-    $('#ms-stage').innerHTML=[['','Everything worked so far'],['active','In play: contact made through quote'],['due','Follow-up due']].concat(STAGES).map(function(o){return '<option value="'+o[0]+'">'+esc(o[1])+'</option>';}).join('');
+    $('#ms-stage').innerHTML=[['','Everything worked so far'],['active','In play: contact made through quote'],['due','Follow-up due'],['walk','Walkthrough coming up']].concat(STAGES).map(function(o){return '<option value="'+o[0]+'">'+esc(o[1])+'</option>';}).join('');
     $('#ms-sort').innerHTML=[['upd','Last updated'],['route','Grouped by route'],['stage','Furthest along first'],['next','Follow-up date']].map(function(o){return '<option value="'+o[0]+'">'+esc(o[1])+'</option>';}).join('');
-    $('#ck-who').addEventListener('change',function(){S.who=$('#ck-who').value;S.open=null;S.stop=null;S.draft='';render();});
+    $('#ck-who').addEventListener('change',function(){S.who=$('#ck-who').value;S.open=null;S.stop=null;clearDraft();S.agAll=false;render();});
+    $('#ck-agenda').addEventListener('click',function(e){var t=e.target.closest('[data-open],[data-agall]');if(!t)return;if(t.dataset.open)H.openLead(t.dataset.open);else{S.agAll=!S.agAll;renderAgenda();}});
     $('#ck-claims').addEventListener('click',function(e){var t=e.target.closest('[data-ckopen]');if(t)openClaim(t.dataset.ckopen,false);});
     var op=$('#ck-open');op.addEventListener('click',ckClick);
-    op.addEventListener('input',function(e){if(e.target&&e.target.id==='ck-note')S.draft=String(e.target.value||'');});
-    op.addEventListener('change',function(e){if(e.target&&e.target.id==='ck-show'){S.show=e.target.value;renderOpen();}});
+    function typed(e){var t=e.target||{},v=String(t.value||'');if(t.id==='ck-note')S.draft=v;else if(t.id==='ck-next')S.dnext=v;else if(t.id==='ck-wk')S.dwk=v;else if(t.id==='ck-wkt')S.dwkt=v;}
+    op.addEventListener('input',typed);
+    op.addEventListener('change',function(e){if(e.target&&e.target.id==='ck-show'){S.show=e.target.value;renderOpen();}else typed(e);});
     ['#ms-q','#ms-rep','#ms-stage','#ms-route','#ms-sort'].forEach(function(s){$(s).addEventListener(s==='#ms-q'?'input':'change',function(){S.limit=40;renderMaster();});});
     $('#ms-more').addEventListener('click',function(){S.limit+=40;renderMaster();});
     $('#ms-list').addEventListener('click',function(e){var t=e.target.closest('[data-open]');if(t)H.openLead(t.dataset.open);});
   }
-  return {begin:begin,render:render,wire:wire,zoneBits:zoneBits,zoneClick:zoneClick,where:where,who:function(n){var k=idx.route[n],c=k&&claims().get(k);return c?H.repName(c.rep):'';},meChanged:function(){S.who=null;S.assign=null;S.open=null;S.stop=null;S.draft='';},state:S};
+  return {begin:begin,render:render,wire:wire,zoneBits:zoneBits,zoneClick:zoneClick,where:where,who:function(n){var k=idx.route[n],c=k&&claims().get(k);return c?H.repName(c.rep):'';},meChanged:function(){S.who=null;S.assign=null;S.open=null;S.stop=null;clearDraft();S.agAll=false;},state:S};
 }
 /*END BOARD*/
 /*END PURE*/
@@ -917,6 +965,8 @@ function openLead(id,pan){
     +'<label class="f" for="sh-ph">Phone<input id="sh-ph" type="tel" maxlength="30" autocomplete="off" value="'+esc(l.ph||'')+'"></label>'
     +'<label class="f" for="sh-em">Email<input id="sh-em" type="email" maxlength="80" autocomplete="off" value="'+esc(l.em||'')+'"></label>'
     +'<label class="f" for="sh-next">Follow up on<input id="sh-next" type="date" value="'+esc(l.next||'')+'"></label>'
+    +'<label class="f" for="sh-wk">Walkthrough date<input id="sh-wk" type="date" value="'+esc(String(l.wk||'').slice(0,10))+'"></label>'
+    +'<label class="f" for="sh-wkt">Walkthrough time<input id="sh-wkt" type="time" value="'+esc(String(l.wk||'').slice(11,16))+'"></label>'
     +'</div><label class="f" for="sh-note">Add a note<textarea id="sh-note" maxlength="600" placeholder="Who you spoke to, what they said, what happens next"></textarea></label>'
     +'<div class="btns"><button class="btn primary" type="button" data-d="save">Save</button></div></div>';
   h+='<div class="card"><h3>History</h3>'+(notes.length?notes.map(function(n){return '<div class="note"><time>'+esc(fmtWhen(n.t))+' · '+esc(n.by||'')+'</time>'+esc(n.x)+'</div>';}).join(''):'<p class="row-sub">No notes yet.</p>')+'</div>';
@@ -954,10 +1004,13 @@ function drawerClick(e){
   if(act==='route'){toggleStop(id);openLead(id,false);return;}
   if(act==='save'){
     var old=l.st||'new',st=$('#sh-stage').value,rv=$('#sh-rep').value,rep=rv===''?null:+rv;
+    var nx=$('#sh-next').value||'',wk=joinWalk($('#sh-wk').value||'',$('#sh-wkt').value||'');
+    if(wk&&wk!==(l.wk||'')&&st===old&&EARLY.indexOf(st)>=0)st='walk_sched'; /* setting a walkthrough date books the walkthrough */
     if(rep===null&&st!=='new'&&ME!=='office')rep=+ME;
-    var patch={st:st,rep:rep,gc:$('#sh-gc').value.trim(),cn:$('#sh-cn').value.trim(),ph:$('#sh-ph').value.trim(),em:$('#sh-em').value.trim(),next:$('#sh-next').value||''};
+    var patch={st:st,rep:rep,gc:$('#sh-gc').value.trim(),cn:$('#sh-cn').value.trim(),ph:$('#sh-ph').value.trim(),em:$('#sh-em').value.trim(),next:nx,wk:wk};
     var notes=(l.notes||[]).slice(),txt=$('#sh-note').value.trim(),now=Date.now();
     if(st!==old)notes.push({t:now,by:meName(),x:'Stage changed from '+STAGE_NAME[old]+' to '+STAGE_NAME[st]+'.'});
+    dateLines(l,nx,wk,fmtIso).forEach(function(x){notes.push({t:now,by:meName(),x:x});});
     if(txt)notes.push({t:now,by:meName(),x:txt});
     patch.notes=notes.slice(-40);
     closeDrawer();saveLead(id,patch);toast('Saved.');
