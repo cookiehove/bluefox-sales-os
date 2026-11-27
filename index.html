@@ -283,6 +283,7 @@ setTimeout(function(){if(!window.BF_AUTH_LOADED){var m=document.getElementById('
       <div class="grid">
         <label class="f" for="cf-r0">Salesman 1 name<input id="cf-r0" maxlength="30" autocomplete="off"></label>
         <label class="f" for="cf-r1">Salesman 2 name<input id="cf-r1" maxlength="30" autocomplete="off"></label>
+        <label class="f" for="cf-o">Name for the office<input id="cf-o" maxlength="30" autocomplete="off" placeholder="Office"></label>
       </div>
       <div class="btns"><button class="btn" id="cf-save" type="button">Save names</button></div>
     </div>
@@ -342,6 +343,7 @@ function parseLL(text){var m=String(text||'').match(/(-?\d{1,2}\.\d{3,})\s*,\s*(
 /* ---- route claims, route checklists and the master list: one copy, used by the phone view and the map page ---- */
 var QUICK=['Nobody on site','Left a card','Met the superintendent','Got the contractor’s contact','Come back later','Site looks finished'];
 var IN_PLAY=['contact','bidlist','walk_sched','walk_done','quoted'];
+function cfgFrom(c){return {reps:(c.reps||[]).slice(0,2).map(String),office:String((c&&c.office)||'').slice(0,30)};}
 function claimId(made,n){return 'c_'+(Math.round(+made)||0)+'_'+(+n);}
 function realNote(n){return !!(n&&n.x)&&!/^Stage changed from /.test(n.x)&&n.x!=='Added by hand.';}
 function lastNote(l){var ns=(l&&l.notes)||[];for(var i=ns.length-1;i>=0;i--)if(realNote(ns[i]))return ns[i];return null;}
@@ -429,8 +431,8 @@ function makeBoard(H){
     h+='<div class="prog"><span class="bar-track"><span class="bar-fill" style="display:block;width:'+(t.n?Math.round(t.done/t.n*100):0)+'%"></span></span><span>'+t.done+' of '+t.n+' done</span></div>';
     var sum=STAGES.filter(function(x){return x[0]!=='new'&&t.by[x[0]];}).map(function(x){return '<span class="pill t-'+STAGE_TONE[x[0]]+'">'+t.by[x[0]]+' '+esc(x[1])+'</span>';}).join('');
     if(sum)h+='<div class="chips">'+sum+'</div>';
-    var nx=left.slice(0,9);
-    if(nx.length)h+='<div class="btns"><a class="'+H.sm+'" href="'+esc('https://www.google.com/maps/dir/?api=1&destination='+mapPt(nx[nx.length-1])+(nx.length>1?'&waypoints='+nx.slice(0,-1).map(mapPt).join('%7C'):'')+'&travelmode=driving')+'" target="_blank" rel="noopener">Google Maps: '+(nx.length>1?'next '+nx.length+' stops':'last stop')+'</a></div>';
+    var nx=left.slice(0,9),fin=left.length<=9; /* the last batch of stops ends back at home base, so the day is a full round trip */
+    if(nx.length){var wp=(fin?nx:nx.slice(0,-1)).map(mapPt).join('%7C');h+='<div class="btns"><a class="'+H.sm+'" href="'+esc('https://www.google.com/maps/dir/?api=1&destination='+(fin?BASE.la+','+BASE.lo:mapPt(nx[nx.length-1]))+(wp?'&waypoints='+wp:'')+'&travelmode=driving')+'" target="_blank" rel="noopener">Google Maps: '+(fin?'last '+(nx.length>1?nx.length+' stops':'stop')+', then home':'next '+nx.length+' stops')+'</a></div>';}
     h+='<label class="f" for="ck-show">Show<select id="ck-show">'+[['all','All '+t.n+' stops'],['todo','Still to do ('+(t.n-t.done)+')'],['done','Done ('+t.done+')']].map(function(o){return '<option value="'+o[0]+'"'+(o[0]===S.show?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select></label>';
     var rows=stops.map(function(s,i){
       var l=H.lead(s.id),st=l.st||'new',done=st!=='new',open=S.stop===s.id,nm=esc(s.n||s.a);
@@ -550,14 +552,15 @@ function fmtDur(min){var h=Math.floor(min/60),m=Math.round(min-h*60);if(m===60){
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 
 var SITES=[],CUSTOM=[],BY=new Map(),LEADS=new Map(),ROUTES=new Map(),CLAIMS=new Map();
-var CFG={reps:['Salesman 1','Salesman 2']};
+var CFG={reps:['Salesman 1','Salesman 2'],office:''};
 var db=null,ME='office',LIMIT=40,PREVIEW=null,ZONES=null,sitesState='loading',openId=null,armed=null;
 var store={get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}}};
 
 function L(id){return LEADS.get(id)||{};}
 function stageOf(id){return L(id).st||'new';}
 function repName(i){return (i===null||i===undefined||i==='')?'':(CFG.reps[+i]||('Salesman '+(+i+1)));}
-function meName(){return ME==='office'?'Office':repName(ME);}
+function officeName(){return CFG.office||'Office';}
+function meName(){return ME==='office'?officeName():repName(ME);}
 function allSites(){return SITES.concat(CUSTOM);}
 function rebuild(){
   CUSTOM=[];
@@ -571,7 +574,7 @@ function setConn(kind,text){var c=$('#conn');c.className='conn'+(kind?' '+kind:'
 var chains={};
 function chain(key,fn){chains[key]=(chains[key]||Promise.resolve()).then(fn).catch(function(e){toast('That change did not save ('+((e&&e.code)||'error')+'). Check your signal and try again.');});}
 function saveLocal(){var o={leads:{},routes:{},claims:{},cfg:CFG,zones:ZONES};LEADS.forEach(function(v,k){o.leads[k]=v;});ROUTES.forEach(function(v,k){o.routes[k]=v;});CLAIMS.forEach(function(v,k){o.claims[k]=v;});store.set('bf_local',JSON.stringify(o));}
-function loadLocal(){try{var o=JSON.parse(store.get('bf_local')||'null');if(o){LEADS=new Map(Object.entries(o.leads||{}));ROUTES=new Map(Object.entries(o.routes||{}));CLAIMS=new Map(Object.entries(o.claims||{}));if(o.cfg&&o.cfg.reps)CFG=o.cfg;ZONES=(o.zones&&Array.isArray(o.zones.list))?o.zones:null;}}catch(e){}}
+function loadLocal(){try{var o=JSON.parse(store.get('bf_local')||'null');if(o){LEADS=new Map(Object.entries(o.leads||{}));ROUTES=new Map(Object.entries(o.routes||{}));CLAIMS=new Map(Object.entries(o.claims||{}));if(o.cfg&&o.cfg.reps&&o.cfg.reps.length)CFG=cfgFrom(o.cfg);ZONES=(o.zones&&Array.isArray(o.zones.list))?o.zones:null;}}catch(e){}}
 function saveLead(id,patch){
   var next=Object.assign({},L(id),patch,{upd:Date.now(),by:meName()});
   if(!next.st)next.st='new';
@@ -597,11 +600,12 @@ function saveCfg(){if(db)chain('config/main',function(){return db.doc('config/ma
 function setOptions(sel,opts,keep){var v=keep===undefined?sel.value:keep;sel.innerHTML=opts.map(function(o){return '<option value="'+esc(o[0])+'">'+esc(o[1])+'</option>';}).join('');if(opts.some(function(o){return String(o[0])===String(v);}))sel.value=v;}
 function repOpts(){return CFG.reps.map(function(n,i){return [String(i),n];});}
 function fillReps(){
-  setOptions($('#me'),[['office','Office']].concat(repOpts()),ME);
+  setOptions($('#me'),[['office',officeName()]].concat(repOpts()),ME);
   setOptions($('#rt-rep'),repOpts());
   setOptions($('#ld-rep'),[['','Anyone'],['none','Unassigned']].concat(repOpts()));
   if(document.activeElement!==$('#cf-r0'))$('#cf-r0').value=CFG.reps[0]||'';
   if(document.activeElement!==$('#cf-r1'))$('#cf-r1').value=CFG.reps[1]||'';
+  if(document.activeElement!==$('#cf-o'))$('#cf-o').value=CFG.office||'';
 }
 function fillStatic(){
   setOptions($('#ld-stage'),[['','All stages'],['active','In progress (contact through quote)']].concat(STAGES));
@@ -913,7 +917,7 @@ function wire(){
   $('#overlay').addEventListener('click',function(e){if(e.target===this)closeSheet();});
   document.addEventListener('keydown',function(e){if(e.key==='Escape'&&openId)closeSheet();});
   $('#add-form').addEventListener('submit',addSite);
-  $('#cf-save').addEventListener('click',function(){var a=$('#cf-r0').value.trim()||'Salesman 1',b=$('#cf-r1').value.trim()||'Salesman 2';CFG=Object.assign({},CFG,{reps:[a,b]});saveCfg();toast('Names saved.');});
+  $('#cf-save').addEventListener('click',function(){var a=$('#cf-r0').value.trim()||'Salesman 1',b=$('#cf-r1').value.trim()||'Salesman 2';CFG=Object.assign({},CFG,{reps:[a,b],office:$('#cf-o').value.trim().slice(0,30)});saveCfg();toast('Names saved.');});
   window.addEventListener('resize',function(){clearTimeout(wire.tm);wire.tm=setTimeout(renderRoutes,200);});
 }
 
@@ -950,7 +954,7 @@ async function connect(){
   db.collection('routes').onSnapshot(function(snap){var m=new Map();snap.docs.forEach(function(x){m.set(x.id,x.data());});ROUTES=m;renderRoutes();},bad);
   db.doc('zones/main').onSnapshot(function(s){ZDOC=s.exists?s.data():null;pickZones();},function(){});
   db.collection('zones').onSnapshot(function(snap){var m=new Map();snap.docs.forEach(function(x){if(String(x.id).slice(0,2)==='c_')m.set(x.id,x.data());});CLAIMS=m;renderAll();},function(){});
-  db.doc('config/main').onSnapshot(function(s){if(s.exists){var c=s.data();if(c&&Array.isArray(c.reps)&&c.reps.length){CFG={reps:c.reps.slice(0,2).map(String)};fillReps();renderAll();}}},function(){});
+  db.doc('config/main').onSnapshot(function(s){if(s.exists){var c=s.data();if(c&&Array.isArray(c.reps)&&c.reps.length){CFG=cfgFrom(c);fillReps();renderAll();}}},function(){});
 }
 
 ME=store.get('bf_me')||'office';

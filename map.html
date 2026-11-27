@@ -289,6 +289,7 @@ setTimeout(function(){if(!window.BF_AUTH_LOADED){var m=document.getElementById('
         <div class="grid">
           <label class="f" for="cf-r0">Salesman 1 name<input id="cf-r0" maxlength="30" autocomplete="off"></label>
           <label class="f" for="cf-r1">Salesman 2 name<input id="cf-r1" maxlength="30" autocomplete="off"></label>
+          <label class="f" for="cf-o" style="grid-column:1/-1">Name for the office<input id="cf-o" maxlength="30" autocomplete="off" placeholder="Office"></label>
         </div>
         <div class="btns"><button class="btn" id="cf-save" type="button">Save names</button></div>
       </div>
@@ -354,6 +355,7 @@ function parseLL(text){var m=String(text||'').match(/(-?\d{1,2}\.\d{3,})\s*,\s*(
 /* ---- route claims, route checklists and the master list: one copy, used by the phone view and the map page ---- */
 var QUICK=['Nobody on site','Left a card','Met the superintendent','Got the contractor’s contact','Come back later','Site looks finished'];
 var IN_PLAY=['contact','bidlist','walk_sched','walk_done','quoted'];
+function cfgFrom(c){return {reps:(c.reps||[]).slice(0,2).map(String),office:String((c&&c.office)||'').slice(0,30)};}
 function claimId(made,n){return 'c_'+(Math.round(+made)||0)+'_'+(+n);}
 function realNote(n){return !!(n&&n.x)&&!/^Stage changed from /.test(n.x)&&n.x!=='Added by hand.';}
 function lastNote(l){var ns=(l&&l.notes)||[];for(var i=ns.length-1;i>=0;i--)if(realNote(ns[i]))return ns[i];return null;}
@@ -441,8 +443,8 @@ function makeBoard(H){
     h+='<div class="prog"><span class="bar-track"><span class="bar-fill" style="display:block;width:'+(t.n?Math.round(t.done/t.n*100):0)+'%"></span></span><span>'+t.done+' of '+t.n+' done</span></div>';
     var sum=STAGES.filter(function(x){return x[0]!=='new'&&t.by[x[0]];}).map(function(x){return '<span class="pill t-'+STAGE_TONE[x[0]]+'">'+t.by[x[0]]+' '+esc(x[1])+'</span>';}).join('');
     if(sum)h+='<div class="chips">'+sum+'</div>';
-    var nx=left.slice(0,9);
-    if(nx.length)h+='<div class="btns"><a class="'+H.sm+'" href="'+esc('https://www.google.com/maps/dir/?api=1&destination='+mapPt(nx[nx.length-1])+(nx.length>1?'&waypoints='+nx.slice(0,-1).map(mapPt).join('%7C'):'')+'&travelmode=driving')+'" target="_blank" rel="noopener">Google Maps: '+(nx.length>1?'next '+nx.length+' stops':'last stop')+'</a></div>';
+    var nx=left.slice(0,9),fin=left.length<=9; /* the last batch of stops ends back at home base, so the day is a full round trip */
+    if(nx.length){var wp=(fin?nx:nx.slice(0,-1)).map(mapPt).join('%7C');h+='<div class="btns"><a class="'+H.sm+'" href="'+esc('https://www.google.com/maps/dir/?api=1&destination='+(fin?BASE.la+','+BASE.lo:mapPt(nx[nx.length-1]))+(wp?'&waypoints='+wp:'')+'&travelmode=driving')+'" target="_blank" rel="noopener">Google Maps: '+(fin?'last '+(nx.length>1?nx.length+' stops':'stop')+', then home':'next '+nx.length+' stops')+'</a></div>';}
     h+='<label class="f" for="ck-show">Show<select id="ck-show">'+[['all','All '+t.n+' stops'],['todo','Still to do ('+(t.n-t.done)+')'],['done','Done ('+t.done+')']].map(function(o){return '<option value="'+o[0]+'"'+(o[0]===S.show?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select></label>';
     var rows=stops.map(function(s,i){
       var l=H.lead(s.id),st=l.st||'new',done=st!=='new',open=S.stop===s.id,nm=esc(s.n||s.a);
@@ -562,7 +564,7 @@ function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 
 var SITES=parseSites(document.getElementById('sites-data').textContent.trim());
 var CUSTOM=[],BY=new Map(),LEADS=new Map(),ROUTES=new Map(),CLAIMS=new Map();
-var CFG={reps:['Salesman 1','Salesman 2']};
+var CFG={reps:['Salesman 1','Salesman 2'],office:''};
 var ME='office',LIMIT=30,openId=null,armed=null,WORK=[],WORKZONE=null,ZONES=null,pinMode=false,boxMode=false;
 var ZCOL=['#1556d6','#d6247a','#0f8a5f','#b35c00','#6a3fc0','#0a7f8f','#a3261e','#4d6b00'];
 var store={get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},set:function(k,v){try{localStorage.setItem(k,v);return true;}catch(e){return false;}}};
@@ -570,7 +572,8 @@ var store={get:function(k){try{return localStorage.getItem(k);}catch(e){return n
 function L_(id){return LEADS.get(id)||{};}
 function stageOf(id){return L_(id).st||'new';}
 function repName(i){return (i===null||i===undefined||i==='')?'':(CFG.reps[+i]||('Salesman '+(+i+1)));}
-function meName(){return ME==='office'?'Office':repName(ME);}
+function officeName(){return CFG.office||'Office';}
+function meName(){return ME==='office'?officeName():repName(ME);}
 function allSites(){return SITES.concat(CUSTOM);}
 function rebuild(){
   CUSTOM=[];
@@ -631,10 +634,10 @@ function connectHosted(){
     db.collection('routes').onSnapshot(function(snap){var m=new Map(),sy={};snap.docs.forEach(function(x){var v=x.data();m.set(x.id,v);sy[x.id]=JSON.stringify(v);});ROUTES=m;SYNC.routes=sy;refreshSoon();},bad);
     db.doc('zones/main').onSnapshot(function(s){ZDOC=s.exists?s.data():null;pickZones();},function(){});
     db.collection('zones').onSnapshot(function(snap){var m=new Map(),sy={};snap.docs.forEach(function(x){if(String(x.id).slice(0,2)!=='c_')return;var v=x.data();m.set(x.id,v);sy[x.id]=JSON.stringify(v);});CLAIMS=m;SYNC.claims=sy;refreshSoon();},function(){});
-    db.doc('config/main').onSnapshot(function(s){if(s.exists){var cf=s.data();if(cf&&Array.isArray(cf.reps)&&cf.reps.length){CFG={reps:cf.reps.slice(0,2).map(String)};SYNC.cfg=JSON.stringify(CFG);fillReps();refreshSoon();}}},function(){});
+    db.doc('config/main').onSnapshot(function(s){if(s.exists){var cf=s.data();if(cf&&Array.isArray(cf.reps)&&cf.reps.length){CFG=cfgFrom(cf);SYNC.cfg=JSON.stringify(CFG);fillReps();refreshSoon();}}},function(){});
   });
 }
-function adopt(o){LEADS=new Map(Object.entries(o.leads||{}));ROUTES=new Map(Object.entries(o.routes||{}));CLAIMS=new Map(Object.entries(o.claims||{}));if(o.cfg&&Array.isArray(o.cfg.reps)&&o.cfg.reps.length)CFG={reps:o.cfg.reps.slice(0,2).map(String)};ZONES=(o.zones&&Array.isArray(o.zones.list))?o.zones:null;}
+function adopt(o){LEADS=new Map(Object.entries(o.leads||{}));ROUTES=new Map(Object.entries(o.routes||{}));CLAIMS=new Map(Object.entries(o.claims||{}));if(o.cfg&&Array.isArray(o.cfg.reps)&&o.cfg.reps.length)CFG=cfgFrom(o.cfg);ZONES=(o.zones&&Array.isArray(o.zones.list))?o.zones:null;}
 function loadSaved(){try{var o=JSON.parse(store.get('bf_sales_os')||'null');if(o)adopt(o);}catch(e){}}
 function saveLead(id,patch){var next=Object.assign({},L_(id),patch,{upd:Date.now(),by:meName()});if(!next.st)next.st='new';LEADS.set(id,next);persist();refresh();}
 function saveClaim(key,data){if(data)CLAIMS.set(key,data);else CLAIMS.delete(key);persist();refresh();}
@@ -643,10 +646,10 @@ function saveClaim(key,data){if(data)CLAIMS.set(key,data);else CLAIMS.delete(key
 function setOptions(sel,opts,keep){var v=keep===undefined?sel.value:keep;sel.innerHTML=opts.map(function(o){return '<option value="'+esc(o[0])+'">'+esc(o[1])+'</option>';}).join('');if(opts.some(function(o){return String(o[0])===String(v);}))sel.value=v;}
 function repOpts(){return CFG.reps.map(function(n,i){return [String(i),n];});}
 function fillReps(){
-  setOptions($('#me'),[['office','Office']].concat(repOpts()),ME);
+  setOptions($('#me'),[['office',officeName()]].concat(repOpts()),ME);
   setOptions($('#rt-rep'),repOpts());
   setOptions($('#ld-rep'),[['','Anyone'],['none','Unassigned']].concat(repOpts()));
-  $('#cf-r0').value=CFG.reps[0]||'';$('#cf-r1').value=CFG.reps[1]||'';
+  $('#cf-r0').value=CFG.reps[0]||'';$('#cf-r1').value=CFG.reps[1]||'';$('#cf-o').value=CFG.office||'';
 }
 function fillStatic(){
   setOptions($('#ld-stage'),[['','All stages'],['active','In progress (contact through quote)']].concat(STAGES));
@@ -973,7 +976,7 @@ function wire(){
   BOARD.wire();
   $('#drawer').addEventListener('click',drawerClick);
   document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(openId)closeDrawer();if(pinMode)setPin(false);if(boxMode)setBox(false);}});
-  $('#cf-save').addEventListener('click',function(){var a=$('#cf-r0').value.trim()||'Salesman 1',b=$('#cf-r1').value.trim()||'Salesman 2';CFG={reps:[a,b]};persist();fillReps();refresh();toast('Names saved.');});
+  $('#cf-save').addEventListener('click',function(){var a=$('#cf-r0').value.trim()||'Salesman 1',b=$('#cf-r1').value.trim()||'Salesman 2';CFG={reps:[a,b],office:$('#cf-o').value.trim().slice(0,30)};persist();fillReps();refresh();toast('Names saved.');});
   $('#bk-export').addEventListener('click',exportData);
   $('#bk-file').addEventListener('change',function(){if(this.files&&this.files[0])importData(this.files[0]);this.value='';});
   $('#dp-refresh').addEventListener('click',function(){if(window.BF_refreshPack)window.BF_refreshPack(true);else toast('Sign in first.');});
