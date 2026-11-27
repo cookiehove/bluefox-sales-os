@@ -359,18 +359,26 @@ function cfgFrom(c){return {reps:(c.reps||[]).slice(0,2).map(String),office:Stri
 function claimId(made,n){return 'c_'+(Math.round(+made)||0)+'_'+(+n);}
 function realNote(n){return !!(n&&n.x)&&!/^Stage changed from /.test(n.x)&&n.x!=='Added by hand.';}
 function lastNote(l){var ns=(l&&l.notes)||[];for(var i=ns.length-1;i>=0;i--)if(realNote(ns[i]))return ns[i];return null;}
-function claimIndex(claims,zones){
-  /* stop: which claim each stop sits in (the newest claim wins). route: the claim holding at least half of each current numbered route. num: the current number of a claimed route. */
-  var stop={},route={},num={};
+function claimIndex(claims,zones,isOpen){
+  /* stop: which claim each stop sits in (the newest claim wins). route: the claim on each current numbered route: the one made on that very route, or else the one holding at least half of its stops still to do. num: the current number of a claimed route. */
+  var stop={},route={},num={},made=(zones&&zones.made)||0;
   claims.forEach(function(c,k){(c.ids||[]).forEach(function(x){var o=stop[x]&&claims.get(stop[x]);if(!o||(o.at||0)<=(c.at||0))stop[x]=k;});});
-  ((zones&&zones.list)||[]).forEach(function(z){var cnt={},best='',ids=z.ids||[];ids.forEach(function(x){var k=stop[x];if(k){cnt[k]=(cnt[k]||0)+1;if(!best||cnt[k]>cnt[best])best=k;}});if(best&&cnt[best]*2>=ids.length){route[z.n]=best;if(num[best]===undefined)num[best]=z.n;}});
+  ((zones&&zones.list)||[]).forEach(function(z){
+    var k0=claimId(made,z.n),best='';
+    if(claims.has(k0)&&(claims.get(k0).made||0)===made)best=k0;
+    else{var cnt={},open=0;(z.ids||[]).forEach(function(x){if(isOpen&&!isOpen(x))return;open++;var k=stop[x];if(k){cnt[k]=(cnt[k]||0)+1;if(!best||cnt[k]>cnt[best])best=k;}});if(!(best&&cnt[best]*2>=open))best='';}
+    if(best){route[z.n]=best;if(num[best]===undefined)num[best]=z.n;}
+  });
   return {stop:stop,route:route,num:num};
 }
 function makeBoard(H){
   var $=H.$,esc=H.esc,S={open:null,stop:null,draft:'',who:null,show:'all',limit:40,arm:null,assign:null},idx={stop:{},route:{},num:{}},zoneNum={};
   function claims(){return H.claims();}
   function put(el,html){if(!el)return false;if(el._bh===html)return false;el._bh=html;el.innerHTML=html;return true;}
-  function begin(){idx=claimIndex(claims(),H.zones());zoneNum={};var z=H.zones();((z&&z.list)||[]).forEach(function(r){(r.ids||[]).forEach(function(x){zoneNum[x]=r.n;});});}
+  function isOpen(x){return H.stageOf(x)==='new';}
+  /* the stops of a route nobody has done yet and nobody holds on a checklist: what the next person to claim it gets */
+  function freeOf(z){return (z.ids||[]).filter(function(x){return !!H.site(x)&&isOpen(x)&&!idx.stop[x];});}
+  function begin(){idx=claimIndex(claims(),H.zones(),isOpen);zoneNum={};var z=H.zones();((z&&z.list)||[]).forEach(function(r){(r.ids||[]).forEach(function(x){zoneNum[x]=r.n;});});}
   function label(k){var c=claims().get(k),z=H.zones();if(!c)return '';var n=(z&&z.made===c.made)?c.n:(idx.num[k]!==undefined?idx.num[k]:null);return 'Route '+(n!==null?(+n):(+c.n)+' (earlier numbering)')+(c.town?' · '+c.town:'');}
   function tally(stops){var t={n:stops.length,done:0,play:0,won:0,by:{}};stops.forEach(function(s){var st=H.stageOf(s.id);t.by[st]=(t.by[st]||0)+1;if(st!=='new')t.done++;if(IN_PLAY.indexOf(st)>=0)t.play++;if(st==='won')t.won++;});return t;}
   function progText(t){return t.done+' of '+t.n+' done'+(t.play?' · '+t.play+' in play':'')+(t.won?' · '+t.won+' won':'');}
@@ -380,13 +388,17 @@ function makeBoard(H){
 
   /* the numbered-routes list on each page asks for these two */
   function zoneBits(z){
-    var k=idx.route[z.n],me=H.me(),n=+z.n;
-    if(k){var c=claims().get(k);return {meta:' · <span class="claimed">claimed by '+esc(H.repName(c.rep))+'</span>',btn:'<button class="'+H.sm+'" type="button" data-ckopen="'+esc(k)+'">Checklist</button>',mine:me!=='office'&&+me===c.rep,claimed:true};}
+    var k=idx.route[z.n],me=H.me(),n=+z.n,all=H.stopsOf(z.ids),per=+((H.zones()||{}).per)||15;
+    if(k){var c=claims().get(k),left=all.filter(function(s){return isOpen(s.id);}).length;
+      return {desc:all.length+' stops · about '+H.fmtDur(routeStats(all,per).total)+' · '+(left?left+' not yet visited':'all visited'),meta:' · <span class="claimed">claimed by '+esc(H.repName(c.rep))+'</span>',btn:'<button class="'+H.sm+'" type="button" data-ckopen="'+esc(k)+'">Checklist</button>',mine:me!=='office'&&+me===c.rep,claimed:true};}
+    var free=H.stopsOf(freeOf(z));
+    if(!free.length)return {desc:'all '+all.length+' stops are done or on a checklist',meta:'',btn:'',mine:false,claimed:false};
+    var desc=free.length+(free.length<all.length?' stops left':' stops')+' · about '+H.fmtDur(routeStats(free,per).total);
     if(me==='office'){
-      if(S.assign===n)return {meta:' · who is taking it?',btn:H.reps().map(function(nm,i){return '<button class="'+H.sm+' primary" type="button" data-claim="'+n+'" data-rep="'+i+'">'+esc(nm)+'</button>';}).join(''),mine:false};
-      return {meta:'',btn:'<button class="'+H.sm+'" type="button" data-claim="'+n+'">Assign</button>',mine:false};
+      if(S.assign===n)return {desc:desc,meta:' · who is taking it?',btn:H.reps().map(function(nm,i){return '<button class="'+H.sm+' primary" type="button" data-claim="'+n+'" data-rep="'+i+'">'+esc(nm)+'</button>';}).join(''),mine:false,claimed:false};
+      return {desc:desc,meta:'',btn:'<button class="'+H.sm+'" type="button" data-claim="'+n+'">Assign</button>',mine:false,claimed:false};
     }
-    return {meta:'',btn:'<button class="'+H.sm+' primary" type="button" data-claim="'+n+'">Claim</button>',mine:false};
+    return {desc:desc,meta:'',btn:'<button class="'+H.sm+' primary" type="button" data-claim="'+n+'">Claim</button>',mine:false,claimed:false};
   }
   function zoneClick(t){
     var d=t.dataset||{};
@@ -400,10 +412,11 @@ function makeBoard(H){
     var z=H.zones(),r=z&&z.list.filter(function(x){return +x.n===n;})[0];if(!r)return;
     begin();var k0=idx.route[r.n];
     if(k0){H.toast('Route '+n+' is already claimed by '+H.repName(claims().get(k0).rep)+'.');H.redrawZones();return;}
-    var stops=H.stopsOf(r.ids),tc={},town='';stops.forEach(function(s){tc[s.town]=(tc[s.town]||0)+1;if(!town||tc[s.town]>tc[town])town=s.town;});
+    var free=freeOf(r);if(!free.length){H.toast('Every stop on Route '+n+' is already done or on someone’s checklist.');H.redrawZones();return;}
+    var stops=H.stopsOf(free),tc={},town='';stops.forEach(function(s){tc[s.town]=(tc[s.town]||0)+1;if(!town||tc[s.town]>tc[town])town=s.town;});
     var key=claimId(z.made,n);
     S.assign=null;S.open=key;S.stop=null;S.draft='';S.arm=null;
-    H.saveClaim(key,{rep:rep,at:Date.now(),by:H.meName(),n:n,made:z.made||0,town:town,ids:r.ids.slice()});
+    H.saveClaim(key,{rep:rep,at:Date.now(),by:H.meName(),n:n,made:z.made||0,town:town,ids:free});
     H.toast('Route '+n+' now belongs to '+H.repName(rep)+'. Its checklist is open.');
     H.showChecklist();if(H.onOpenRoute)H.onOpenRoute(stops);
   }
@@ -461,7 +474,7 @@ function makeBoard(H){
       return r+'</li>';
     }).join('');
     h+=rows?'<ol class="list">'+rows+'</ol>':'<div class="empty">'+(S.show==='todo'?'Every stop on this route is done.':'Nothing is ticked yet.')+'</div>';
-    if(can)h+='<div class="btns"><button class="'+H.sm+' danger" type="button" data-rel="'+esc(S.open)+'">'+(S.arm==='rel'?'Tap again to give this route up':'Give this route up')+'</button></div><p class="fine">Giving a route up only removes the claim. Ticks and notes stay on the leads.</p>';
+    if(can)h+='<div class="btns"><button class="'+H.sm+' danger" type="button" data-rel="'+esc(S.open)+'">'+(S.arm==='rel'?'Tap again to give this route up':'Give this route up')+'</button></div><p class="fine">Giving a route up takes the stops already done off it, so whoever claims it next only gets what is left. The ticks and notes stay on those leads and in the master list.</p>';
     if(put(box,h)){var ta=$('#ck-note');if(ta&&S.stop){ta.value=S.draft;if(foc&&ta.focus){ta.focus();try{ta.setSelectionRange(pos,pos);}catch(e){}}}}
   }
   function tick(id){
@@ -480,7 +493,7 @@ function makeBoard(H){
   function ckClick(e){
     var t=e.target.closest('[data-tick],[data-ck],[data-st],[data-q],[data-cksave],[data-open],[data-rel]');if(!t)return;var d=t.dataset||{};
     if(d.open){H.openLead(d.open);return;}
-    if(d.rel){if(S.arm==='rel'){S.arm=null;var k=d.rel;S.open=null;S.stop=null;S.draft='';H.saveClaim(k,null);H.toast('Route given up. Anyone can claim it now.');}else{S.arm='rel';renderOpen();setTimeout(function(){if(S.arm==='rel'){S.arm=null;renderOpen();}},4000);}return;}
+    if(d.rel){if(S.arm==='rel'){S.arm=null;var k=d.rel;S.open=null;S.stop=null;S.draft='';H.saveClaim(k,null);H.toast('Route given up. The stops still to do can be claimed by anyone.');}else{S.arm='rel';renderOpen();setTimeout(function(){if(S.arm==='rel'){S.arm=null;renderOpen();}},4000);}return;}
     if(d.tick){tick(d.tick);return;}
     if(d.ck){var was=S.stop;if(was&&S.draft.trim())saveNote(was,true);S.stop=was===d.ck?null:d.ck;S.draft='';renderOpen();if(S.stop&&H.onOpenStop)H.onOpenStop(S.stop);return;}
     if(d.st&&S.stop){setStage(S.stop,d.st);return;}
@@ -518,7 +531,7 @@ function makeBoard(H){
     var lastG=null;
     put(box,out.length?out.slice(0,S.limit).map(function(o){
       var s=o.s,l=o.l,bits=[],head='';
-      var where=o.k?label(o.k):(zoneNum[s.id]!==undefined?'Route '+(+zoneNum[s.id])+', not claimed':'Not on a route');
+      var where=o.k?label(o.k):(zoneNum[s.id]!==undefined?'Route '+(+zoneNum[s.id])+(idx.route[zoneNum[s.id]]?'':', not claimed'):'Not on a route');
       if(sort==='route'){var g=o.k||('z'+(zoneNum[s.id]!==undefined?zoneNum[s.id]:''));if(g!==lastG){lastG=g;var cc=o.k&&claims().get(o.k);head='<div class="zhead">'+esc(where)+(cc?' · '+esc(H.repName(cc.rep))+' · '+esc(progText(tally(H.stopsOf(cc.ids)))):'')+'</div>';}}
       else bits.push(esc(where));
       if(o.own!==null)bits.push(esc(H.repName(o.own)));
@@ -528,7 +541,7 @@ function makeBoard(H){
     }).join(''):'<div class="empty">'+(all?'No worked leads match those choices.':'Nothing has been worked yet. As soon as anyone ticks a stop, picks a stage or saves a note, the lead shows up here for the whole team.')+'</div>');
     $('#ms-more').hidden=out.length<=S.limit;
   }
-  function where(id){var k=idx.stop[id],c=k&&claims().get(k);if(c)return 'On '+label(k)+', claimed by '+H.repName(c.rep);return zoneNum[id]!==undefined?'On Route '+(+zoneNum[id])+', not claimed yet':'';}
+  function where(id){var k=idx.stop[id],c=k&&claims().get(k);if(c)return 'On '+label(k)+', claimed by '+H.repName(c.rep);return zoneNum[id]!==undefined?'On Route '+(+zoneNum[id])+(idx.route[zoneNum[id]]?'':', not claimed yet'):'';}
   function render(){begin();renderClaims();renderOpen();renderMaster();}
   function wire(){
     $('#ms-stage').innerHTML=[['','Everything worked so far'],['active','In play: contact made through quote'],['due','Follow-up due']].concat(STAGES).map(function(o){return '<option value="'+o[0]+'">'+esc(o[1])+'</option>';}).join('');
@@ -830,7 +843,7 @@ function renderZoneList(){
     stops.forEach(function(s){tc[s.town]=(tc[s.town]||0)+1;if(!town||tc[s.town]>tc[town])town=s.town;});
     var sc=sched[z.n],cb=BOARD.zoneBits(z);if(left)open++;if(cb.claimed)taken++;
     var head='';if(z.w>=0&&z.w!==lastW){lastW=z.w;head='<div class="zhead" style="font-weight:600;margin:14px 0 4px">'+esc(WLAB[z.w]||'')+'</div>';}
-    return head+'<div class="zrow'+(cb.mine?' mine':'')+'"><span class="sw" style="background:'+ZCOL[(z.n-1)%ZCOL.length]+'"></span><span class="row-main" style="flex:1"><span class="row-title">Route '+z.n+(town?' · '+esc(town):'')+'</span><span class="row-meta">'+stops.length+' stops · about '+fmtDur(st.total)+' · '+(left?left+' not yet visited':'all visited')+(sc?' · scheduled '+esc(fmtIso(sc.date))+', '+esc(repName(sc.rep)):'')+cb.meta+'</span></span><span class="zbtns">'+cb.btn+'<button class="btn x" type="button" data-zone="'+z.n+'">Plan a day</button></span></div>';
+    return head+'<div class="zrow'+(cb.mine?' mine':'')+'"><span class="sw" style="background:'+ZCOL[(z.n-1)%ZCOL.length]+'"></span><span class="row-main" style="flex:1"><span class="row-title">Route '+z.n+(town?' · '+esc(town):'')+'</span><span class="row-meta">'+cb.desc+(sc?' · scheduled '+esc(fmtIso(sc.date))+', '+esc(repName(sc.rep)):'')+cb.meta+'</span></span><span class="zbtns">'+cb.btn+'<button class="btn x" type="button" data-zone="'+z.n+'">Plan a day</button></span></div>';
   }).join('');
   sum.textContent=ZONES.list.length+' numbered routes, each about one '+fmtDur((ZONES.hours||6)*60)+' day for one salesman. '+open+' still have unvisited sites, which is about '+Math.ceil(open/2)+' working days with two salesmen.'+(ZONES.miles?' About '+(+ZONES.miles).toLocaleString()+' miles of driving in total.':'')+(ZONES.list[0].w>=0?' They are numbered by what is expected to finish soonest.':'')+' Split on '+fmtWhen(ZONES.made)+'.'+(taken?' '+taken+' claimed so far.':' None are claimed yet.');
   drawZones();
@@ -947,7 +960,7 @@ function exportData(){try{var blob=new Blob([JSON.stringify(snapshot())],{type:'
 function importData(file){var rd=new FileReader();rd.onload=function(){try{var o=JSON.parse(rd.result);if(!o||o.app!=='bluefox-sales-os'||typeof o.leads!=='object')throw new Error('bad');if(!db){toast('Sign in first.');return;}Object.keys(o.leads||{}).forEach(function(k){LEADS.set(k,o.leads[k]);});Object.keys(o.routes||{}).forEach(function(k){ROUTES.set(k,o.routes[k]);});Object.keys(o.claims||{}).forEach(function(k){if(String(k).slice(0,2)==='c_')CLAIMS.set(k,o.claims[k]);});persist();fillReps();refresh();toast('Backup added to the team\u2019s shared data.');}catch(e){toast('That file is not a Bluefox Sales OS backup.');}};rd.readAsText(file);}
 
 /* wiring */
-var BOARD=makeBoard({$:$,esc:esc,sm:'btn x',fmtWhen:fmtWhen,fmtIso:fmtIso,todayStr:todayStr,
+var BOARD=makeBoard({$:$,esc:esc,sm:'btn x',fmtDur:fmtDur,fmtWhen:fmtWhen,fmtIso:fmtIso,todayStr:todayStr,
   lead:L_,leads:function(){return LEADS;},site:function(id){return BY.get(id);},stageOf:stageOf,stopsOf:stopsOf,orderStops:orderStops,metaLine:metaLine,pill:pill,
   repName:repName,reps:function(){return CFG.reps;},me:function(){return ME;},meName:meName,zones:function(){return ZONES;},claims:function(){return CLAIMS;},
   saveClaim:saveClaim,saveLead:saveLead,openLead:function(id){openLead(id,true);},toast:toast,redrawZones:function(){renderZones();},
