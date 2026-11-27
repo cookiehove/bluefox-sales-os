@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  /* layout: sticky top bar with four tabs, one column of cards, phone first, 860px max */
+  /* layout: sticky top bar with five tabs, one column of cards, phone first, 860px max */
   --bg:#eef1f5; --surface:#ffffff; --ink:#0d1b33; --muted:#4b5a75; --line:#d3dae5;
   --brand:#0b2a6f; --action:#1556d6;
   --good:#0f6b43; --good-bg:#e2f4ea; --warn:#7a4f00; --warn-bg:#fdf0d2; --bad:#a3261e; --bad-bg:#fbe6e4; --info:#12408f; --info-bg:#e3ecfd;
@@ -106,7 +106,31 @@ th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05
 .fine{font-size:13px;color:var(--muted);max-width:70ch}
 .zrow{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
 .sw{flex:none;width:14px;height:14px;border-radius:3px}
-.zlist{max-height:420px;overflow-y:auto}
+.zlist{max-height:min(70vh,640px);overflow-y:auto}
+.zrow.on{border-color:var(--action);box-shadow:inset 3px 0 0 var(--action)}
+.zrow.mine{border-color:var(--good)}
+.zbtns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;flex:none;max-width:46%}
+.claimed{font-weight:700;color:var(--good)}
+.zhead{font-weight:700;font-size:14px;color:var(--brand);margin:10px 0 0;padding-bottom:3px;border-bottom:2px solid var(--line)}
+.prog{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.prog .bar-fill{background:var(--good)}
+.ck{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px}
+.ck.done{background:#f3f9f5;border-color:#b9d8c6}
+.ck-top{display:flex;align-items:flex-start;gap:10px}
+.ck-tick{flex:none;width:44px;height:44px;border-radius:10px;border:2px solid #6b7a94;background:#fff;color:#fff;font:700 24px/1 var(--body);cursor:pointer;padding:0}
+.ck.done .ck-tick{background:var(--good);border-color:var(--good)}
+.ck-main{display:flex;align-items:flex-start;gap:8px;flex:1;min-width:0;text-align:left;background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}
+.ck-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.ck-note{display:block;font-size:13px;color:var(--ink);background:#fff7dc;border-left:3px solid #d9a400;border-radius:0 6px 6px 0;padding:3px 8px;margin-top:4px;overflow-wrap:anywhere}
+.ck-more{color:var(--muted)}
+.ck-panel{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:10px}
+.ck-lab{font-size:13px;font-weight:600;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{min-height:40px;padding:7px 12px;border-radius:999px;border:1px solid #93a1b8;background:#fff;color:var(--ink);font:600 14px var(--body);cursor:pointer}
+.chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.chip.q{border-style:dashed;color:var(--action);font-weight:500}
+@media (max-width:560px){.zrow{flex-wrap:wrap}.zrow .zbtns{flex-basis:100%;max-width:none;justify-content:flex-start;padding-left:22px}}
+@media (max-width:480px){.tabs a{padding:12px 7px 10px;font-size:14px;letter-spacing:.02em}}
 @media (max-width:420px){.bar-row{grid-template-columns:118px 1fr 40px}}
 .gate{position:fixed;inset:0;z-index:100000;background:#eef1f5;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
 .gate[hidden]{display:none}
@@ -154,9 +178,10 @@ setTimeout(function(){if(!window.BF_AUTH_LOADED){var m=document.getElementById('
   </div>
   <nav class="tabs" aria-label="Sections">
     <a href="#routes" data-view="routes">Routes</a>
-    <a href="#leads" data-view="leads">Leads</a>
-    <a href="#pipeline" data-view="pipeline">Pipeline</a>
-    <a href="#add-site" data-view="add-site">Add a site</a>
+    <a href="#check" data-view="check">Checklists</a>
+    <a href="#pipeline" data-view="pipeline">Master list</a>
+    <a href="#leads" data-view="leads">Sites</a>
+    <a href="#add-site" data-view="add-site">Add site</a>
   </nav>
 </header>
 
@@ -199,6 +224,17 @@ setTimeout(function(){if(!window.BF_AUTH_LOADED){var m=document.getElementById('
     </div>
   </section>
 
+  <section class="view" id="v-check">
+    <h1>Route checklists</h1>
+    <div class="card">
+      <h2>Claimed routes</h2>
+      <p class="lede">A route becomes yours when you press Claim on it in the numbered routes list on the Routes tab. Everyone on the team sees who has which route and how far along it is.</p>
+      <label class="f" for="ck-who">Show<select id="ck-who"></select></label>
+      <div class="list" id="ck-claims"></div>
+    </div>
+    <div class="card" id="ck-open" hidden></div>
+  </section>
+
   <section class="view" id="v-leads">
     <h1>Job sites</h1>
     <div class="grid">
@@ -221,7 +257,21 @@ setTimeout(function(){if(!window.BF_AUTH_LOADED){var m=document.getElementById('
   </section>
 
   <section class="view" id="v-pipeline">
-    <h1>Pipeline</h1>
+    <h1>Master list</h1>
+    <div class="card">
+      <h2>Every lead being worked</h2>
+      <p class="lede">One list for the whole team: every stop anyone has ticked, noted or moved along, whichever route it is on. Tap a lead for its full details and history.</p>
+      <div class="grid">
+        <label class="f" for="ms-q">Search<input type="search" id="ms-q" placeholder="Name, street, contractor, contact, note" autocomplete="off"></label>
+        <label class="f" for="ms-rep">Salesman<select id="ms-rep"></select></label>
+        <label class="f" for="ms-stage">Stage<select id="ms-stage"></select></label>
+        <label class="f" for="ms-route">Route<select id="ms-route"></select></label>
+        <label class="f" for="ms-sort">Arrange by<select id="ms-sort"></select></label>
+      </div>
+      <div class="count" id="ms-count"></div>
+      <div class="list" id="ms-list"></div>
+      <div class="btns"><button class="btn" id="ms-more" type="button">Show more</button></div>
+    </div>
     <div class="card"><h2>Where every lead stands</h2><div class="bars" id="pl-bars"></div></div>
     <div class="card"><h2>By salesman</h2><div class="tbl-wrap" id="pl-reps"></div></div>
     <div class="card"><h2>Follow-ups due</h2><div class="list" id="pl-due"></div></div>
@@ -286,6 +336,199 @@ function routeStats(stops,perStop){var prev=BASE,drive=0,mi=0,legs=[];stops.forE
 function mapPt(s){return s.la?(s.la+','+s.lo):encodeURIComponent(s.a+', NC');}
 function mapsLinks(stops){var out=[],b=BASE.la+','+BASE.lo,origin=b;for(var i=0;i<stops.length;i+=9){var g=stops.slice(i,i+9),last=i+9>=stops.length;var dest=last?b:mapPt(g[g.length-1]);var wps=(last?g:g.slice(0,-1)).map(mapPt).join('%7C');out.push({label:(g.length>1?'Stops '+(i+1)+' to '+(i+g.length):'Stop '+(i+1))+(last?', then back':''),url:'https://www.google.com/maps/dir/?api=1&origin='+origin+'&destination='+dest+(wps?'&waypoints='+wps:'')+'&travelmode=driving'});origin=mapPt(g[g.length-1]);}return out;}
 function parseLL(text){var m=String(text||'').match(/(-?\d{1,2}\.\d{3,})\s*,\s*(-?\d{1,3}\.\d{3,})/);if(!m)return null;var la=+m[1],lo=+m[2];if(la<33||la>37.5||lo>-78||lo<-84)return null;return {la:la,lo:lo};}
+/*BOARD*/
+/* ---- route claims, route checklists and the master list: one copy, used by the phone view and the map page ---- */
+var QUICK=['Nobody on site','Left a card','Met the superintendent','Got the contractor’s contact','Come back later','Site looks finished'];
+var IN_PLAY=['contact','bidlist','walk_sched','walk_done','quoted'];
+function claimId(made,n){return 'c_'+(Math.round(+made)||0)+'_'+(+n);}
+function realNote(n){return !!(n&&n.x)&&!/^Stage changed from /.test(n.x)&&n.x!=='Added by hand.';}
+function lastNote(l){var ns=(l&&l.notes)||[];for(var i=ns.length-1;i>=0;i--)if(realNote(ns[i]))return ns[i];return null;}
+function claimIndex(claims,zones){
+  /* stop: which claim each stop sits in (the newest claim wins). route: the claim holding at least half of each current numbered route. num: the current number of a claimed route. */
+  var stop={},route={},num={};
+  claims.forEach(function(c,k){(c.ids||[]).forEach(function(x){var o=stop[x]&&claims.get(stop[x]);if(!o||(o.at||0)<=(c.at||0))stop[x]=k;});});
+  ((zones&&zones.list)||[]).forEach(function(z){var cnt={},best='',ids=z.ids||[];ids.forEach(function(x){var k=stop[x];if(k){cnt[k]=(cnt[k]||0)+1;if(!best||cnt[k]>cnt[best])best=k;}});if(best&&cnt[best]*2>=ids.length){route[z.n]=best;if(num[best]===undefined)num[best]=z.n;}});
+  return {stop:stop,route:route,num:num};
+}
+function makeBoard(H){
+  var $=H.$,esc=H.esc,S={open:null,stop:null,draft:'',who:null,show:'all',limit:40,arm:null,assign:null},idx={stop:{},route:{},num:{}},zoneNum={};
+  function claims(){return H.claims();}
+  function put(el,html){if(!el)return false;if(el._bh===html)return false;el._bh=html;el.innerHTML=html;return true;}
+  function begin(){idx=claimIndex(claims(),H.zones());zoneNum={};var z=H.zones();((z&&z.list)||[]).forEach(function(r){(r.ids||[]).forEach(function(x){zoneNum[x]=r.n;});});}
+  function label(k){var c=claims().get(k),z=H.zones();if(!c)return '';var n=(z&&z.made===c.made)?c.n:(idx.num[k]!==undefined?idx.num[k]:null);return 'Route '+(n!==null?(+n):(+c.n)+' (earlier numbering)')+(c.town?' · '+c.town:'');}
+  function tally(stops){var t={n:stops.length,done:0,play:0,won:0,by:{}};stops.forEach(function(s){var st=H.stageOf(s.id);t.by[st]=(t.by[st]||0)+1;if(st!=='new')t.done++;if(IN_PLAY.indexOf(st)>=0)t.play++;if(st==='won')t.won++;});return t;}
+  function progText(t){return t.done+' of '+t.n+' done'+(t.play?' · '+t.play+' in play':'')+(t.won?' · '+t.won+' won':'');}
+  function noteLine(l){var n=lastNote(l);if(!n)return '';var x=String(n.x),more=(l.notes||[]).filter(realNote).length-1;if(x.length>160)x=x.slice(0,157)+'…';return '<span class="ck-note">'+esc(H.fmtWhen(n.t))+(n.by?' · '+esc(n.by):'')+': '+esc(x)+(more>0?' <span class="ck-more">(+'+more+' earlier)</span>':'')+'</span>';}
+  function ownerRep(id){var l=H.lead(id),me=H.me();if(l.rep!==null&&l.rep!==undefined)return l.rep;if(me!=='office')return +me;var k=idx.stop[id],c=k&&claims().get(k);return c?c.rep:null;}
+  function stamp(l,old,st,txt){var notes=(l.notes||[]).slice(),now=Date.now();if(st!==old)notes.push({t:now,by:H.meName(),x:'Stage changed from '+STAGE_NAME[old]+' to '+STAGE_NAME[st]+'.'});if(txt)notes.push({t:now,by:H.meName(),x:txt});return notes.slice(-40);}
+
+  /* the numbered-routes list on each page asks for these two */
+  function zoneBits(z){
+    var k=idx.route[z.n],me=H.me(),n=+z.n;
+    if(k){var c=claims().get(k);return {meta:' · <span class="claimed">claimed by '+esc(H.repName(c.rep))+'</span>',btn:'<button class="'+H.sm+'" type="button" data-ckopen="'+esc(k)+'">Checklist</button>',mine:me!=='office'&&+me===c.rep,claimed:true};}
+    if(me==='office'){
+      if(S.assign===n)return {meta:' · who is taking it?',btn:H.reps().map(function(nm,i){return '<button class="'+H.sm+' primary" type="button" data-claim="'+n+'" data-rep="'+i+'">'+esc(nm)+'</button>';}).join(''),mine:false};
+      return {meta:'',btn:'<button class="'+H.sm+'" type="button" data-claim="'+n+'">Assign</button>',mine:false};
+    }
+    return {meta:'',btn:'<button class="'+H.sm+' primary" type="button" data-claim="'+n+'">Claim</button>',mine:false};
+  }
+  function zoneClick(t){
+    var d=t.dataset||{};
+    if(d.ckopen){openClaim(d.ckopen,true);return true;}
+    if(d.claim){var n=+d.claim,me=H.me();
+      if(me==='office'&&(d.rep===undefined||d.rep===null||d.rep==='')){S.assign=S.assign===n?null:n;H.redrawZones();return true;}
+      claim(n,me==='office'?+d.rep:+me);return true;}
+    return false;
+  }
+  function claim(n,rep){
+    var z=H.zones(),r=z&&z.list.filter(function(x){return +x.n===n;})[0];if(!r)return;
+    begin();var k0=idx.route[r.n];
+    if(k0){H.toast('Route '+n+' is already claimed by '+H.repName(claims().get(k0).rep)+'.');H.redrawZones();return;}
+    var stops=H.stopsOf(r.ids),tc={},town='';stops.forEach(function(s){tc[s.town]=(tc[s.town]||0)+1;if(!town||tc[s.town]>tc[town])town=s.town;});
+    var key=claimId(z.made,n);
+    S.assign=null;S.open=key;S.stop=null;S.draft='';S.arm=null;
+    H.saveClaim(key,{rep:rep,at:Date.now(),by:H.meName(),n:n,made:z.made||0,town:town,ids:r.ids.slice()});
+    H.toast('Route '+n+' now belongs to '+H.repName(rep)+'. Its checklist is open.');
+    H.showChecklist();if(H.onOpenRoute)H.onOpenRoute(stops);
+  }
+  function openClaim(k,go){
+    if(S.stop&&S.draft.trim())saveNote(S.stop,true);
+    S.open=k;S.stop=null;S.draft='';S.arm=null;if(go)H.showChecklist();render();
+    var c=claims().get(k);if(c&&H.onOpenRoute)H.onOpenRoute(H.stopsOf(c.ids));
+    var el=$('#ck-open');if(el&&el.scrollIntoView)el.scrollIntoView({block:'start'});
+  }
+
+  /* claimed routes, and the open one's checklist */
+  function claimList(){
+    var me=H.me(),who=S.who,out=[];
+    claims().forEach(function(c,k){if(who==='mine'){if(me==='office'||c.rep!==+me)return;}else if(who!=='all'&&c.rep!==+who)return;out.push({k:k,c:c,t:tally(H.stopsOf(c.ids))});});
+    out.sort(function(a,b){var fa=a.t.done>=a.t.n?1:0,fb=b.t.done>=b.t.n?1:0;return (fa-fb)||((a.c.at||0)-(b.c.at||0));});
+    return out;
+  }
+  function renderClaims(){
+    var box=$('#ck-claims');if(!box)return;
+    var me=H.me();if(S.who===null||(S.who==='mine'&&me==='office'))S.who=me==='office'?'all':'mine';
+    var opts=(me==='office'?[]:[['mine','My routes']]).concat([['all','Everyone’s routes']],H.reps().map(function(n,i){return [String(i),n+'’s routes'];}));
+    put($('#ck-who'),opts.map(function(o){return '<option value="'+o[0]+'"'+(o[0]===S.who?' selected':'')+'>'+esc(o[1])+'</option>';}).join(''));
+    var list=claimList();
+    if(S.open&&!claims().has(S.open))S.open=null;
+    if(!S.open&&list.length)S.open=list[0].k;
+    put(box,list.length?list.map(function(o){var on=o.k===S.open,full=o.t.n&&o.t.done>=o.t.n;return '<div class="zrow'+(on?' on':'')+'"><span class="row-main" style="flex:1"><span class="row-title">'+esc(label(o.k))+'</span><span class="row-meta">'+esc(H.repName(o.c.rep))+' · '+esc(progText(o.t))+(full?' · finished':'')+'</span></span><button class="'+H.sm+'" type="button" data-ckopen="'+esc(o.k)+'"'+(on?' aria-current="true"':'')+'>'+(on?'Showing':'Open')+'</button></div>';}).join(''):'<div class="empty">'+(claims().size?'No claimed routes match that choice.':'No routes are claimed yet. In the numbered routes list, find the route you are taking and press Claim. It then shows up here as a checklist.')+'</div>');
+  }
+  function renderOpen(){
+    var box=$('#ck-open');if(!box)return;
+    var c=S.open&&claims().get(S.open);
+    if(!c){box.hidden=true;put(box,'');return;}
+    box.hidden=false;
+    var ae=(typeof document!=='undefined'&&document.activeElement)||null,foc=!!(ae&&ae.id==='ck-note'),pos=foc?ae.selectionStart:0;
+    var stops=H.orderStops(H.stopsOf(c.ids)),t=tally(stops),me=H.me(),can=me==='office'||+me===c.rep;
+    var left=stops.filter(function(s){return H.stageOf(s.id)==='new';});
+    var h='<h2>'+esc(label(S.open))+'</h2><p class="row-sub">Claimed by '+esc(H.repName(c.rep))+(c.at?' on '+esc(H.fmtWhen(c.at)):'')+'. Tap the box to tick a stop as visited. Tap the stop itself to pick where it stands and add a note.</p>';
+    h+='<div class="prog"><span class="bar-track"><span class="bar-fill" style="display:block;width:'+(t.n?Math.round(t.done/t.n*100):0)+'%"></span></span><span>'+t.done+' of '+t.n+' done</span></div>';
+    var sum=STAGES.filter(function(x){return x[0]!=='new'&&t.by[x[0]];}).map(function(x){return '<span class="pill t-'+STAGE_TONE[x[0]]+'">'+t.by[x[0]]+' '+esc(x[1])+'</span>';}).join('');
+    if(sum)h+='<div class="chips">'+sum+'</div>';
+    var nx=left.slice(0,9);
+    if(nx.length)h+='<div class="btns"><a class="'+H.sm+'" href="'+esc('https://www.google.com/maps/dir/?api=1&destination='+mapPt(nx[nx.length-1])+(nx.length>1?'&waypoints='+nx.slice(0,-1).map(mapPt).join('%7C'):'')+'&travelmode=driving')+'" target="_blank" rel="noopener">Google Maps: '+(nx.length>1?'next '+nx.length+' stops':'last stop')+'</a></div>';
+    h+='<label class="f" for="ck-show">Show<select id="ck-show">'+[['all','All '+t.n+' stops'],['todo','Still to do ('+(t.n-t.done)+')'],['done','Done ('+t.done+')']].map(function(o){return '<option value="'+o[0]+'"'+(o[0]===S.show?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select></label>';
+    var rows=stops.map(function(s,i){
+      var l=H.lead(s.id),st=l.st||'new',done=st!=='new',open=S.stop===s.id,nm=esc(s.n||s.a);
+      if(!open&&((S.show==='todo'&&done)||(S.show==='done'&&!done)))return '';
+      var r='<li class="ck'+(done?' done':'')+'"><div class="ck-top"><button type="button" class="ck-tick" data-tick="'+esc(s.id)+'" role="checkbox" aria-checked="'+(done?'true':'false')+'" aria-label="Visited: '+nm+'">'+(done?'✓':'')+'</button>'
+        +'<button type="button" class="ck-main" data-ck="'+esc(s.id)+'" aria-expanded="'+(open?'true':'false')+'"><span class="stop-txt"><span class="ck-head"><span class="row-title">'+(i+1)+'. '+nm+'</span>'+H.pill(s.id)+'</span><span class="row-sub">'+esc(s.a)+(s.z?' '+esc(s.z):'')+(l.gc?' · '+esc(l.gc):'')+'</span><span class="row-meta">'+H.metaLine(s)+'</span>'+noteLine(l)+'</span></button></div>';
+      if(open){
+        r+='<div class="ck-panel"><div class="ck-lab">Where it stands (pick one, it saves straight away)</div><div class="chips" role="group" aria-label="Where it stands">'
+          +STAGES.map(function(x){var on=x[0]===st;return '<button type="button" class="chip'+(on?' on':'')+'" data-st="'+x[0]+'" aria-pressed="'+(on?'true':'false')+'">'+esc(x[0]==='new'?'Not visited yet':x[1])+'</button>';}).join('')+'</div>'
+          +'<label class="f" for="ck-note">Note<textarea id="ck-note" maxlength="600" placeholder="Who you spoke to, what they said, what happens next"></textarea></label>'
+          +'<div class="ck-lab">Quick notes (tap to drop into the note)</div><div class="chips" role="group" aria-label="Quick notes">'+QUICK.map(function(q,j){return '<button type="button" class="chip q" data-q="'+j+'">'+esc(q)+'</button>';}).join('')+'</div>'
+          +'<div class="btns"><button class="'+H.sm+' primary" type="button" data-cksave="'+esc(s.id)+'">Save note</button><a class="'+H.sm+'" href="'+esc('https://www.google.com/maps/dir/?api=1&destination='+mapPt(s)+'&travelmode=driving')+'" target="_blank" rel="noopener">Directions</a><button class="'+H.sm+'" type="button" data-open="'+esc(s.id)+'">All details</button></div></div>';
+      }
+      return r+'</li>';
+    }).join('');
+    h+=rows?'<ol class="list">'+rows+'</ol>':'<div class="empty">'+(S.show==='todo'?'Every stop on this route is done.':'Nothing is ticked yet.')+'</div>';
+    if(can)h+='<div class="btns"><button class="'+H.sm+' danger" type="button" data-rel="'+esc(S.open)+'">'+(S.arm==='rel'?'Tap again to give this route up':'Give this route up')+'</button></div><p class="fine">Giving a route up only removes the claim. Ticks and notes stay on the leads.</p>';
+    if(put(box,h)){var ta=$('#ck-note');if(ta&&S.stop){ta.value=S.draft;if(foc&&ta.focus){ta.focus();try{ta.setSelectionRange(pos,pos);}catch(e){}}}}
+  }
+  function tick(id){
+    var l=H.lead(id),old=l.st||'new';
+    if(old==='new'){H.saveLead(id,{st:'visited',rep:ownerRep(id),notes:stamp(l,old,'visited','')});H.toast('Ticked as visited.');}
+    else if(old==='visited'){H.saveLead(id,{st:'new',notes:stamp(l,old,'new','')});H.toast('Tick removed.');}
+    else{S.stop=id;renderOpen();H.toast('This one is already at “'+STAGE_NAME[old]+'”. Change it with the buttons under it.');}
+  }
+  function setStage(id,st){var l=H.lead(id),old=l.st||'new',txt=S.draft.trim();if(st===old&&!txt)return;S.draft='';var ta=$('#ck-note');if(ta)ta.value='';H.saveLead(id,{st:st,rep:ownerRep(id),notes:stamp(l,old,st,txt)});H.toast('Saved: '+(st==='new'?'Not visited yet':STAGE_NAME[st])+'.');}
+  function saveNote(id,quiet){
+    var l=H.lead(id),old=l.st||'new',txt=S.draft.trim();
+    if(!txt){if(!quiet)H.toast('Type a note first, or tap one of the quick notes.');return;}
+    var st=(old==='new'&&H.me()!=='office')?'visited':old;S.draft='';var ta=$('#ck-note');if(ta)ta.value='';
+    H.saveLead(id,{st:st,rep:ownerRep(id),notes:stamp(l,old,st,txt)});if(!quiet)H.toast(st!==old?'Note saved and the stop ticked as visited.':'Note saved.');
+  }
+  function ckClick(e){
+    var t=e.target.closest('[data-tick],[data-ck],[data-st],[data-q],[data-cksave],[data-open],[data-rel]');if(!t)return;var d=t.dataset||{};
+    if(d.open){H.openLead(d.open);return;}
+    if(d.rel){if(S.arm==='rel'){S.arm=null;var k=d.rel;S.open=null;S.stop=null;S.draft='';H.saveClaim(k,null);H.toast('Route given up. Anyone can claim it now.');}else{S.arm='rel';renderOpen();setTimeout(function(){if(S.arm==='rel'){S.arm=null;renderOpen();}},4000);}return;}
+    if(d.tick){tick(d.tick);return;}
+    if(d.ck){var was=S.stop;if(was&&S.draft.trim())saveNote(was,true);S.stop=was===d.ck?null:d.ck;S.draft='';renderOpen();if(S.stop&&H.onOpenStop)H.onOpenStop(S.stop);return;}
+    if(d.st&&S.stop){setStage(S.stop,d.st);return;}
+    if(d.q!==undefined&&d.q!==null&&S.stop){var ta=$('#ck-note'),cur=ta?String(ta.value||''):S.draft,p=QUICK[+d.q]||'';S.draft=cur+(cur&&!/\s$/.test(cur)?' ':'')+p+'. ';if(ta)ta.value=S.draft;return;}
+    if(d.cksave){var t2=$('#ck-note');if(t2&&t2.value!==undefined&&S.stop===d.cksave)S.draft=String(t2.value||'');saveNote(d.cksave);return;}
+  }
+
+  /* the master list: every lead anyone has worked, whichever route it is on */
+  function worked(l){return !!l&&(!!(l.st&&l.st!=='new')||!!l.site||!!l.gc||!!l.cn||!!l.ph||!!l.em||!!l.next||!!lastNote(l));}
+  function renderMaster(){
+    var box=$('#ms-list');if(!box)return;
+    var rk=Array.from(claims().keys());
+    put($('#ms-rep'),[['','Everyone']].concat(H.reps().map(function(n,i){return [String(i),n];}),[['none','Nobody yet']]).map(function(o){return '<option value="'+o[0]+'"'+(o[0]===$('#ms-rep').value?' selected':'')+'>'+esc(o[1])+'</option>';}).join(''));
+    put($('#ms-route'),[['','All routes']].concat(rk.map(function(k){return [k,label(k)+' ('+H.repName(claims().get(k).rep)+')'];}),[['none','Not on a claimed route']]).map(function(o){return '<option value="'+esc(o[0])+'"'+(o[0]===$('#ms-route').value?' selected':'')+'>'+esc(o[1])+'</option>';}).join(''));
+    var q=String($('#ms-q').value||'').trim().toLowerCase(),rp=$('#ms-rep').value||'',stg=$('#ms-stage').value||'',rt=$('#ms-route').value||'',sort=$('#ms-sort').value||'upd',today=H.todayStr(),out=[],all=0,play=0,won=0;
+    if(rt&&rt!=='none'&&!claims().has(rt))rt='';
+    H.leads().forEach(function(l,id){
+      var s=H.site(id);if(!s||!worked(l))return;all++;
+      var st=l.st||'new',k=idx.stop[id]||'',c=k?claims().get(k):null,own=(l.rep!==null&&l.rep!==undefined)?l.rep:(c?c.rep:null);
+      if(IN_PLAY.indexOf(st)>=0)play++;if(st==='won')won++;
+      if(rp==='none'){if(own!==null)return;}else if(rp!==''&&String(own)!==rp)return;
+      if(stg==='active'){if(IN_PLAY.indexOf(st)<0)return;}else if(stg==='due'){if(!(l.next&&l.next<=today)||['won','lost','skip'].indexOf(st)>=0)return;}else if(stg&&st!==stg)return;
+      if(rt==='none'){if(k)return;}else if(rt&&k!==rt)return;
+      if(q){var ln=lastNote(l),hay=(s.n+' '+s.a+' '+(s.o||'')+' '+(l.gc||'')+' '+(l.cn||'')+' '+(l.ph||'')+' '+(ln?ln.x:'')).toLowerCase();if(hay.indexOf(q)<0)return;}
+      out.push({s:s,l:l,st:st,k:k,own:own});
+    });
+    var rank={};STAGES.forEach(function(x,i){rank[x[0]]=i;});rank.lost=-1;rank.skip=-2;
+    function byUpd(a,b){return (b.l.upd||0)-(a.l.upd||0);}
+    function rkey(o){var c=o.k&&claims().get(o.k);return c?[0,c.rep,c.at||0]:[1,0,+zoneNum[o.s.id]||9999];}
+    if(sort==='next')out.sort(function(a,b){return String(a.l.next||'9999').localeCompare(String(b.l.next||'9999'))||byUpd(a,b);});
+    else if(sort==='stage')out.sort(function(a,b){return (rank[b.st]-rank[a.st])||byUpd(a,b);});
+    else if(sort==='route')out.sort(function(a,b){var x=rkey(a),y=rkey(b);return (x[0]-y[0])||(x[1]-y[1])||(x[2]-y[2])||(rank[b.st]-rank[a.st])||byUpd(a,b);});
+    else out.sort(byUpd);
+    $('#ms-count').textContent=all?(out.length===all?all.toLocaleString()+' leads worked so far':out.length.toLocaleString()+' of '+all.toLocaleString()+' worked leads match')+' · '+play+' in play · '+won+' won':'';
+    var lastG=null;
+    put(box,out.length?out.slice(0,S.limit).map(function(o){
+      var s=o.s,l=o.l,bits=[],head='';
+      var where=o.k?label(o.k):(zoneNum[s.id]!==undefined?'Route '+(+zoneNum[s.id])+', not claimed':'Not on a route');
+      if(sort==='route'){var g=o.k||('z'+(zoneNum[s.id]!==undefined?zoneNum[s.id]:''));if(g!==lastG){lastG=g;var cc=o.k&&claims().get(o.k);head='<div class="zhead">'+esc(where)+(cc?' · '+esc(H.repName(cc.rep))+' · '+esc(progText(tally(H.stopsOf(cc.ids)))):'')+'</div>';}}
+      else bits.push(esc(where));
+      if(o.own!==null)bits.push(esc(H.repName(o.own)));
+      if(l.next)bits.push('follow up '+esc(H.fmtIso(l.next)));
+      if(l.upd)bits.push('updated '+esc(H.fmtWhen(l.upd)));
+      return head+'<button class="row" type="button" data-open="'+esc(s.id)+'"><span class="row-main" style="flex:1"><span class="ck-head"><span class="row-title">'+esc(s.n||s.a)+'</span>'+H.pill(s.id)+'</span><span class="row-sub">'+esc(s.a)+(l.gc?' · '+esc(l.gc):'')+(l.cn?' · '+esc(l.cn)+(l.ph?', '+esc(l.ph):''):'')+'</span><span class="row-meta">'+bits.join(' · ')+'</span>'+noteLine(l)+'</span></button>';
+    }).join(''):'<div class="empty">'+(all?'No worked leads match those choices.':'Nothing has been worked yet. As soon as anyone ticks a stop, picks a stage or saves a note, the lead shows up here for the whole team.')+'</div>');
+    $('#ms-more').hidden=out.length<=S.limit;
+  }
+  function where(id){var k=idx.stop[id],c=k&&claims().get(k);if(c)return 'On '+label(k)+', claimed by '+H.repName(c.rep);return zoneNum[id]!==undefined?'On Route '+(+zoneNum[id])+', not claimed yet':'';}
+  function render(){begin();renderClaims();renderOpen();renderMaster();}
+  function wire(){
+    $('#ms-stage').innerHTML=[['','Everything worked so far'],['active','In play: contact made through quote'],['due','Follow-up due']].concat(STAGES).map(function(o){return '<option value="'+o[0]+'">'+esc(o[1])+'</option>';}).join('');
+    $('#ms-sort').innerHTML=[['upd','Last updated'],['route','Grouped by route'],['stage','Furthest along first'],['next','Follow-up date']].map(function(o){return '<option value="'+o[0]+'">'+esc(o[1])+'</option>';}).join('');
+    $('#ck-who').addEventListener('change',function(){S.who=$('#ck-who').value;S.open=null;S.stop=null;S.draft='';render();});
+    $('#ck-claims').addEventListener('click',function(e){var t=e.target.closest('[data-ckopen]');if(t)openClaim(t.dataset.ckopen,false);});
+    var op=$('#ck-open');op.addEventListener('click',ckClick);
+    op.addEventListener('input',function(e){if(e.target&&e.target.id==='ck-note')S.draft=String(e.target.value||'');});
+    op.addEventListener('change',function(e){if(e.target&&e.target.id==='ck-show'){S.show=e.target.value;renderOpen();}});
+    ['#ms-q','#ms-rep','#ms-stage','#ms-route','#ms-sort'].forEach(function(s){$(s).addEventListener(s==='#ms-q'?'input':'change',function(){S.limit=40;renderMaster();});});
+    $('#ms-more').addEventListener('click',function(){S.limit+=40;renderMaster();});
+    $('#ms-list').addEventListener('click',function(e){var t=e.target.closest('[data-open]');if(t)H.openLead(t.dataset.open);});
+  }
+  return {begin:begin,render:render,wire:wire,zoneBits:zoneBits,zoneClick:zoneClick,where:where,who:function(n){var k=idx.route[n],c=k&&claims().get(k);return c?H.repName(c.rep):'';},meChanged:function(){S.who=null;S.assign=null;S.open=null;S.stop=null;S.draft='';},state:S};
+}
+/*END BOARD*/
 /*END PURE*/
 
 (function(){
@@ -304,7 +547,7 @@ function fmtMoney(n){if(!n)return '';if(n>=1e6)return '$'+(n/1e6).toFixed(n>=1e7
 function fmtDur(min){var h=Math.floor(min/60),m=Math.round(min-h*60);if(m===60){h++;m=0;}return (h?h+' h ':'')+m+' min';}
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 
-var SITES=[],CUSTOM=[],BY=new Map(),LEADS=new Map(),ROUTES=new Map();
+var SITES=[],CUSTOM=[],BY=new Map(),LEADS=new Map(),ROUTES=new Map(),CLAIMS=new Map();
 var CFG={reps:['Salesman 1','Salesman 2']};
 var db=null,ME='office',LIMIT=40,PREVIEW=null,ZONES=null,sitesState='loading',openId=null,armed=null;
 var store={get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}}};
@@ -325,8 +568,8 @@ function setConn(kind,text){var c=$('#conn');c.className='conn'+(kind?' '+kind:'
 /* saving */
 var chains={};
 function chain(key,fn){chains[key]=(chains[key]||Promise.resolve()).then(fn).catch(function(e){toast('That change did not save ('+((e&&e.code)||'error')+'). Check your signal and try again.');});}
-function saveLocal(){var o={leads:{},routes:{},cfg:CFG,zones:ZONES};LEADS.forEach(function(v,k){o.leads[k]=v;});ROUTES.forEach(function(v,k){o.routes[k]=v;});store.set('bf_local',JSON.stringify(o));}
-function loadLocal(){try{var o=JSON.parse(store.get('bf_local')||'null');if(o){LEADS=new Map(Object.entries(o.leads||{}));ROUTES=new Map(Object.entries(o.routes||{}));if(o.cfg&&o.cfg.reps)CFG=o.cfg;ZONES=(o.zones&&Array.isArray(o.zones.list))?o.zones:null;}}catch(e){}}
+function saveLocal(){var o={leads:{},routes:{},claims:{},cfg:CFG,zones:ZONES};LEADS.forEach(function(v,k){o.leads[k]=v;});ROUTES.forEach(function(v,k){o.routes[k]=v;});CLAIMS.forEach(function(v,k){o.claims[k]=v;});store.set('bf_local',JSON.stringify(o));}
+function loadLocal(){try{var o=JSON.parse(store.get('bf_local')||'null');if(o){LEADS=new Map(Object.entries(o.leads||{}));ROUTES=new Map(Object.entries(o.routes||{}));CLAIMS=new Map(Object.entries(o.claims||{}));if(o.cfg&&o.cfg.reps)CFG=o.cfg;ZONES=(o.zones&&Array.isArray(o.zones.list))?o.zones:null;}}catch(e){}}
 function saveLead(id,patch){
   var next=Object.assign({},L(id),patch,{upd:Date.now(),by:meName()});
   if(!next.st)next.st='new';
@@ -339,6 +582,12 @@ function saveRoute(id,data){
   else{ROUTES.delete(id);if(db)chain('routes/'+id,function(){return db.doc('routes/'+id).delete();});}
   if(!db)saveLocal();
   renderRoutes();
+}
+/* a claim is one small record per route, kept beside the numbered routes, so two phones claiming different routes never overwrite each other */
+function saveClaim(key,data){
+  if(data)CLAIMS.set(key,data);else CLAIMS.delete(key);
+  if(db)chain('zones/'+key,function(){return data?db.doc('zones/'+key).set(data):db.doc('zones/'+key).delete();});else saveLocal();
+  renderAll();
 }
 function saveCfg(){if(db)chain('config/main',function(){return db.doc('config/main').set(CFG);});else saveLocal();fillReps();renderAll();}
 
@@ -512,20 +761,21 @@ function splitAreas(){
   if(db)chain('zones/main',function(){return db.doc('zones/main').set(ZONES);});else saveLocal();
   renderZones();toast('Split '+pool.length.toLocaleString()+' sites into '+ZONES.list.length+' numbered routes.');
 }
-function renderZones(){
+function renderZones(){BOARD.begin();renderZoneList();BOARD.render();}
+function renderZoneList(){
   var box=$('#zn-list'),sum=$('#zn-sum');
   $('#zn-make').textContent=ZONES?(armed==='zones'?'Tap again to replace the current routes':'Split again'):'Split into numbered routes';
   if(sitesState==='loading'){sum.textContent='';box.innerHTML='';$('#zn-map').hidden=true;return;}
   if(!ZONES||!ZONES.list||!ZONES.list.length){sum.textContent='';box.innerHTML='<div class="empty">No numbered routes yet.</div>';$('#zn-map').hidden=true;return;}
-  var sched={},open=0,lastW=-2;ROUTES.forEach(function(r){if(r.zone&&(!sched[r.zone]||r.date>sched[r.zone].date))sched[r.zone]=r;});
+  var sched={},open=0,taken=0,lastW=-2;ROUTES.forEach(function(r){if(r.zone&&(!sched[r.zone]||r.date>sched[r.zone].date))sched[r.zone]=r;});
   box.innerHTML=ZONES.list.map(function(z){
     var stops=stopsOf(z.ids),left=stops.filter(function(s){return stageOf(s.id)==='new';}).length,st=routeStats(stops,ZONES.per||15),tc={},town='';
     stops.forEach(function(s){tc[s.town]=(tc[s.town]||0)+1;if(!town||tc[s.town]>tc[town])town=s.town;});
-    var sc=sched[z.n];if(left)open++;
+    var sc=sched[z.n],cb=BOARD.zoneBits(z);if(left)open++;if(cb.claimed)taken++;
     var head='';if(z.w>=0&&z.w!==lastW){lastW=z.w;head='<div class="zhead" style="font-weight:600;margin:14px 0 4px">'+esc(WLAB[z.w]||'')+'</div>';}
-    return head+'<div class="zrow"><span class="sw" style="background:'+ZCOL[(z.n-1)%ZCOL.length]+'"></span><span class="row-main" style="flex:1"><span class="row-title">Route '+(+z.n)+(town?' · '+esc(town):'')+'</span><span class="row-meta">'+stops.length+' stops · about '+fmtDur(st.total)+' · '+(left?left+' not yet visited':'all visited')+(sc?' · scheduled '+esc(fmtIso(sc.date))+', '+esc(repName(sc.rep)):'')+'</span></span><button class="btn sm" type="button" data-zone="'+(+z.n)+'">Open</button></div>';
+    return head+'<div class="zrow'+(cb.mine?' mine':'')+'"><span class="sw" style="background:'+ZCOL[(z.n-1)%ZCOL.length]+'"></span><span class="row-main" style="flex:1"><span class="row-title">Route '+(+z.n)+(town?' · '+esc(town):'')+'</span><span class="row-meta">'+stops.length+' stops · about '+fmtDur(st.total)+' · '+(left?left+' not yet visited':'all visited')+(sc?' · scheduled '+esc(fmtIso(sc.date))+', '+esc(repName(sc.rep)):'')+cb.meta+'</span></span><span class="zbtns">'+cb.btn+'<button class="btn sm" type="button" data-zone="'+(+z.n)+'">Plan a day</button></span></div>';
   }).join('');
-  sum.textContent=ZONES.list.length+' numbered routes, each about one '+fmtDur((+ZONES.hours||6)*60)+' day for one salesman. '+open+' still have unvisited sites, which is about '+Math.ceil(open/2)+' working days with two salesmen.'+(ZONES.miles?' About '+(+ZONES.miles).toLocaleString()+' miles of driving in total.':'')+(ZONES.list[0].w>=0?' They are numbered by what is expected to finish soonest.':'')+' Split on '+fmtWhen(ZONES.made)+'.';
+  sum.textContent=ZONES.list.length+' numbered routes, each about one '+fmtDur((+ZONES.hours||6)*60)+' day for one salesman. '+open+' still have unvisited sites, which is about '+Math.ceil(open/2)+' working days with two salesmen.'+(ZONES.miles?' About '+(+ZONES.miles).toLocaleString()+' miles of driving in total.':'')+(ZONES.list[0].w>=0?' They are numbered by what is expected to finish soonest.':'')+' Split on '+fmtWhen(ZONES.made)+'.'+(taken?' '+taken+' claimed so far.':' None are claimed yet: press Claim on the one you are taking.');
   drawZoneMap();
 }
 function drawZoneMap(){
@@ -572,7 +822,7 @@ function renderPipeline(){
 function closeSheet(){$('#overlay').classList.remove('on');openId=null;}
 function openLead(id){
   var s=BY.get(id);if(!s)return;var l=L(id),st=l.st||'new';openId=id;
-  var facts=[KIND[s.k]+(s.sub?' ('+s.sub+')':'')];if(s.u>1&&s.k!=='RM')facts.push(s.u+' homes under construction');if(s.f)facts.push(finishIn(s)<0?'Estimated finish has passed (around '+finishText(s)+'), so it may be done or running late. This is an estimate from the permit date and the size of the job':'Expected to finish around '+finishText(s)+' (an estimate from the permit date and the size of the job)');if(s.sq)facts.push(s.sq.toLocaleString()+' sq ft'+(s.u>1?' in total':''));if(s.c)facts.push(fmtMoney(s.c)+' stated cost');if(s.k==='GO'&&s.x)facts.push(s.x);if(s.d)facts.push((s.k==='FS'?'Added ':'Permit issued ')+fmtD8(s.d));if(s.la)facts.push(Math.round(s.dist*1.3)+' miles from Weddington');
+  var facts=[KIND[s.k]+(s.sub?' ('+s.sub+')':'')];if(s.u>1&&s.k!=='RM')facts.push(s.u+' homes under construction');if(s.f)facts.push(finishIn(s)<0?'Estimated finish has passed (around '+finishText(s)+'), so it may be done or running late. This is an estimate from the permit date and the size of the job':'Expected to finish around '+finishText(s)+' (an estimate from the permit date and the size of the job)');if(s.sq)facts.push(s.sq.toLocaleString()+' sq ft'+(s.u>1?' in total':''));if(s.c)facts.push(fmtMoney(s.c)+' stated cost');if(s.k==='GO'&&s.x)facts.push(s.x);if(s.d)facts.push((s.k==='FS'?'Added ':'Permit issued ')+fmtD8(s.d));if(s.la)facts.push(Math.round(s.dist*1.3)+' miles from Weddington');var wh=BOARD.where(id);if(wh)facts.push(wh);
   var sat=s.la?'https://www.google.com/maps/@?api=1&map_action=map&center='+s.la+','+s.lo+'&zoom=19&basemap=satellite':'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(s.a+', NC');
   var notes=(l.notes||[]).slice().reverse();
   var h='<div class="sheet-head"><div><h2 id="sh-title">'+esc(s.n||s.a)+'</h2><p class="row-sub">'+esc(s.a)+(s.z?' '+esc(s.z):'')+'</p></div><button class="btn sm" type="button" data-sh="close">Close</button></div>';
@@ -635,17 +885,23 @@ function addSite(e){
 }
 
 /* navigation and wiring */
-var VIEWS=['routes','leads','pipeline','add-site'];
+var BOARD=makeBoard({$:$,esc:esc,sm:'btn sm',fmtWhen:fmtWhen,fmtIso:fmtIso,todayStr:todayStr,
+  lead:L,leads:function(){return LEADS;},site:function(id){return BY.get(id);},stageOf:stageOf,stopsOf:stopsOf,orderStops:orderStops,metaLine:metaLine,pill:pill,
+  repName:repName,reps:function(){return CFG.reps;},me:function(){return ME;},meName:meName,zones:function(){return ZONES;},claims:function(){return CLAIMS;},
+  saveClaim:saveClaim,saveLead:saveLead,openLead:openLead,toast:toast,redrawZones:function(){renderZones();},
+  showChecklist:function(){if(location.hash!=='#check')location.hash='#check';window.scrollTo(0,0);}});
+var VIEWS=['routes','check','leads','pipeline','add-site'];
 function showView(){var v=(location.hash||'').replace('#','');if(VIEWS.indexOf(v)<0)v='routes';VIEWS.forEach(function(n){$('#v-'+n).classList.toggle('on',n===v);});document.querySelectorAll('.tabs a').forEach(function(a){var on=a.dataset.view===v;a.classList.toggle('on',on);if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});if(v==='routes')renderRoutes();}
 function renderAll(){renderLeads();renderRoutes();renderPipeline();}
 
 function wire(){
-  window.addEventListener('hashchange',showView);
-  $('#me').addEventListener('change',function(){ME=this.value;store.set('bf_me',ME);if(ME!=='office'){$('#rt-rep').value=ME;renderRoutes();}});
+  window.addEventListener('hashchange',function(){showView();window.scrollTo(0,0);});
+  $('#me').addEventListener('change',function(){ME=this.value;store.set('bf_me',ME);if(ME!=='office')$('#rt-rep').value=ME;BOARD.meChanged();renderAll();});
   ['#rt-rep','#rt-date'].forEach(function(s){$(s).addEventListener('change',function(){PREVIEW=null;armed=null;renderRoutes();});});
   $('#rt-build').addEventListener('click',buildPreview);
   $('#zn-make').addEventListener('click',function(){if(ZONES&&armed!=='zones'){armed='zones';renderZones();setTimeout(function(){if(armed==='zones'){armed=null;renderZones();}},4000);}else{var b=this;b.textContent='Working out the best split…';b.disabled=true;setTimeout(function(){b.disabled=false;splitAreas();renderZones();},40);}});
-  $('#zn-list').addEventListener('click',function(e){var t=e.target.closest('[data-zone]');if(t)openZone(+t.dataset.zone);});
+  $('#zn-list').addEventListener('click',function(e){var t=e.target.closest('[data-zone],[data-claim],[data-ckopen]');if(!t||BOARD.zoneClick(t))return;if(t.dataset.zone)openZone(+t.dataset.zone);});
+  BOARD.wire();
   $('#rt-saved').addEventListener('click',function(e){routeClick(e,false);});
   $('#rt-preview').addEventListener('click',function(e){routeClick(e,true);});
   ['#ld-q','#ld-stage','#ld-kind','#ld-town','#ld-rep','#ld-sort'].forEach(function(s){$(s).addEventListener(s==='#ld-q'?'input':'change',function(){LIMIT=40;renderLeads();});});
@@ -691,6 +947,7 @@ async function connect(){
   db.collection('leads').onSnapshot(function(snap){ok(snap.metadata);var m=new Map();snap.docs.forEach(function(x){m.set(x.id,x.data());});LEADS=m;rebuild();renderAll();},bad);
   db.collection('routes').onSnapshot(function(snap){var m=new Map();snap.docs.forEach(function(x){m.set(x.id,x.data());});ROUTES=m;renderRoutes();},bad);
   db.doc('zones/main').onSnapshot(function(s){ZDOC=s.exists?s.data():null;pickZones();},function(){});
+  db.collection('zones').onSnapshot(function(snap){var m=new Map();snap.docs.forEach(function(x){if(String(x.id).slice(0,2)==='c_')m.set(x.id,x.data());});CLAIMS=m;renderAll();},function(){});
   db.doc('config/main').onSnapshot(function(s){if(s.exists){var c=s.data();if(c&&Array.isArray(c.reps)&&c.reps.length){CFG={reps:c.reps.slice(0,2).map(String)};fillReps();renderAll();}}},function(){});
 }
 
