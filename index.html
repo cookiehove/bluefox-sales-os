@@ -666,7 +666,7 @@ async function connect(){
   setConn('','Sign in to load the team’s data');
   ACCT=await window.BFREADY;db=ACCT.db;
   $('#acct-email').textContent=ACCT.email;$('#acct').hidden=false;
-  $('#acct-out').addEventListener('click',function(){ACCT.signOut();});
+  $('#acct-out').addEventListener('click',function(){try{localStorage.removeItem('bf_pack');}catch(e){}ACCT.signOut();});
   window.BF_onWriteError=function(e){toast((e&&e.code==='permission-denied')?'That change was refused. This sign-in is not on the team list.':'That change did not save ('+((e&&e.code)||'error')+'). Check your signal and try again.');};
   setConn('','Connecting…');
   var live=false,slow=setTimeout(function(){if(!live)setConn('local','No signal. Changes are kept and sent later');},10000);
@@ -674,8 +674,20 @@ async function connect(){
   function bad(e){clearTimeout(slow);setConn('err',(e&&e.code==='permission-denied')?'This sign-in is not on the team list':'Shared data unavailable');}
   window.addEventListener('offline',function(){setConn('local','No signal. Changes are kept and sent later');});
   window.addEventListener('online',function(){if(live)setConn('live','Live, shared with the team');});
-  db.doc('data/sites').onSnapshot(function(s){var t=s.exists?String((s.data()||{}).text||''):'';var bb=s.exists?(s.data()||{}).base:null;if(bb&&+bb.la&&+bb.lo){BASE.la=+bb.la;BASE.lo=+bb.lo;BASE.n=String(bb.n||'Home base');BASE.a=String(bb.a||'');}SITES=t?parseSites(t):[];sitesState=t?'ready':'failed';rebuild();fillTowns();renderAll();renderZones();},bad);
-  db.doc('data/zones').onSnapshot(function(s){var t=s.exists?String((s.data()||{}).text||''):'';DEFAULT_ZONES=t?parseZones(t):null;pickZones();},function(){});
+  function onSitesSnap(s){var t=s.exists?String((s.data()||{}).text||''):'';var bb=s.exists?(s.data()||{}).base:null;if(bb&&+bb.la&&+bb.lo){BASE.la=+bb.la;BASE.lo=+bb.lo;BASE.n=String(bb.n||'Home base');BASE.a=String(bb.a||'');}SITES=t?parseSites(t):[];sitesState=t?'ready':'failed';rebuild();fillTowns();renderAll();renderZones();}
+  function onZonesSnap(s){var t=s.exists?String((s.data()||{}).text||''):'';DEFAULT_ZONES=t?parseZones(t):null;pickZones();}
+  var PKEY='',packMade=-1,packAt=0;
+  function b64u8(x){var b=atob(x),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
+  function cachedPack(){try{return JSON.parse(localStorage.getItem('bf_pack')||'null');}catch(e){return null;}}
+  function usePack(o){if(!o||typeof o.sites!=='string'){packMade=-1;onSitesSnap({exists:false});onZonesSnap({exists:false});return;}if(o.made&&o.made===packMade)return;packMade=o.made||0;var w=document.querySelector('#dp-when');if(w&&o.made)w.textContent='The one you have was made '+new Date(o.made).toLocaleString()+'.';onSitesSnap({exists:true,data:function(){return {text:o.sites,base:o.base};}});onZonesSnap({exists:true,data:function(){return {text:o.zones||''};}});}
+  function refreshPack(say){packAt=Date.now();if(!PKEY){usePack(cachedPack());return;}
+    fetch('data.bin?t='+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('http '+r.status);return r.arrayBuffer();})
+      .then(function(buf){var u=new Uint8Array(buf);return crypto.subtle.importKey('raw',b64u8(PKEY),{name:'AES-GCM'},false,['decrypt']).then(function(key){return crypto.subtle.decrypt({name:'AES-GCM',iv:u.slice(0,12)},key,u.slice(12));});})
+      .then(function(pl){var o=JSON.parse(new TextDecoder().decode(pl));try{localStorage.setItem('bf_pack',JSON.stringify(o));}catch(e){}var same=o.made&&o.made===packMade;usePack(o);if(say)toast(same?'You already have the newest site list.':'Site list updated.');})
+      .catch(function(){usePack(cachedPack());if(say)toast('Could not check for a newer site list. Try again when you have a connection.');});}
+  window.BF_refreshPack=refreshPack;
+  db.doc('data/key').onSnapshot(function(s){PKEY=s.exists?String((s.data()||{}).k||''):'';refreshPack();},bad);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden&&PKEY&&Date.now()-packAt>15*60000)refreshPack();});
   db.collection('leads').onSnapshot(function(snap){ok(snap.metadata);var m=new Map();snap.docs.forEach(function(x){m.set(x.id,x.data());});LEADS=m;rebuild();renderAll();},bad);
   db.collection('routes').onSnapshot(function(snap){var m=new Map();snap.docs.forEach(function(x){m.set(x.id,x.data());});ROUTES=m;renderRoutes();},bad);
   db.doc('zones/main').onSnapshot(function(s){ZDOC=s.exists?s.data():null;pickZones();},function(){});

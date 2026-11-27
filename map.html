@@ -249,8 +249,8 @@ setTimeout(function(){if(!window.BF_AUTH_LOADED){var m=document.getElementById('
       </div>
       <div class="card">
         <h2>Site list</h2>
-        <p class="lede">Load the site list file here when you get a new one. Every signed-in phone and computer updates by itself. Only the owner’s sign-in can do this.</p>
-        <div class="btns"><label class="btn" for="dp-file">Load a site list file</label><input type="file" id="dp-file" accept="application/json,.json" hidden></div>
+        <p class="lede">The site list arrives by itself whenever a new one is published, on every signed-in phone and computer. <span id="dp-when"></span></p>
+        <div class="btns"><button class="btn" type="button" id="dp-refresh">Check for a newer site list</button></div>
       </div>
       <div class="card">
         <h2>Your sign-in</h2>
@@ -364,8 +364,20 @@ function connectHosted(){
     window.addEventListener('offline',function(){setConn('','No connection. Changes are kept and sent later');});
     window.addEventListener('online',function(){if(live)setConn('live','Live, shared with the team');});
     var fitted=false;
-    db.doc('data/sites').onSnapshot(function(s){var t=s.exists?String((s.data()||{}).text||''):'';var bb=s.exists?(s.data()||{}).base:null;if(bb&&+bb.la&&+bb.lo){BASE.la=+bb.la;BASE.lo=+bb.lo;BASE.n=String(bb.n||'Home base');BASE.a=String(bb.a||'');}if(bb&&window.BF_RING){window.BF_RING.setLatLng([BASE.la,BASE.lo]);if(!window.BF_CENTRED){window.BF_CENTRED=true;map.setView([BASE.la,BASE.lo],map.getZoom());}}SITES=t?parseSites(t):[];fillStatic();if(!SITES.length)$('#src-note').textContent='The site list has not been loaded yet. The owner loads it in the Site list box above.';refresh();},bad);
-    db.doc('data/zones').onSnapshot(function(s){var t=s.exists?String((s.data()||{}).text||''):'';DEFAULT_ZONES=t?parseZones(t):null;pickZones();},function(){});
+    function onSitesSnap(s){var t=s.exists?String((s.data()||{}).text||''):'';var bb=s.exists?(s.data()||{}).base:null;if(bb&&+bb.la&&+bb.lo){BASE.la=+bb.la;BASE.lo=+bb.lo;BASE.n=String(bb.n||'Home base');BASE.a=String(bb.a||'');}if(bb&&window.BF_RING){window.BF_RING.setLatLng([BASE.la,BASE.lo]);if(!window.BF_CENTRED){window.BF_CENTRED=true;map.setView([BASE.la,BASE.lo],map.getZoom());}}SITES=t?parseSites(t):[];fillStatic();if(!SITES.length)$('#src-note').textContent='The site list has not arrived yet. Check your connection, then press “Check for a newer site list”.';refresh();}
+    function onZonesSnap(s){var t=s.exists?String((s.data()||{}).text||''):'';DEFAULT_ZONES=t?parseZones(t):null;pickZones();}
+    var PKEY='',packMade=-1,packAt=0;
+    function b64u8(x){var b=atob(x),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
+    function cachedPack(){try{return JSON.parse(localStorage.getItem('bf_pack')||'null');}catch(e){return null;}}
+    function usePack(o){if(!o||typeof o.sites!=='string'){packMade=-1;onSitesSnap({exists:false});onZonesSnap({exists:false});return;}if(o.made&&o.made===packMade)return;packMade=o.made||0;var w=document.querySelector('#dp-when');if(w&&o.made)w.textContent='The one you have was made '+new Date(o.made).toLocaleString()+'.';onSitesSnap({exists:true,data:function(){return {text:o.sites,base:o.base};}});onZonesSnap({exists:true,data:function(){return {text:o.zones||''};}});}
+    function refreshPack(say){packAt=Date.now();if(!PKEY){usePack(cachedPack());return;}
+      fetch('data.bin?t='+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('http '+r.status);return r.arrayBuffer();})
+        .then(function(buf){var u=new Uint8Array(buf);return crypto.subtle.importKey('raw',b64u8(PKEY),{name:'AES-GCM'},false,['decrypt']).then(function(key){return crypto.subtle.decrypt({name:'AES-GCM',iv:u.slice(0,12)},key,u.slice(12));});})
+        .then(function(pl){var o=JSON.parse(new TextDecoder().decode(pl));try{localStorage.setItem('bf_pack',JSON.stringify(o));}catch(e){}var same=o.made&&o.made===packMade;usePack(o);if(say)toast(same?'You already have the newest site list.':'Site list updated.');})
+        .catch(function(){usePack(cachedPack());if(say)toast('Could not check for a newer site list. Try again when you have a connection.');});}
+    window.BF_refreshPack=refreshPack;
+    db.doc('data/key').onSnapshot(function(s){PKEY=s.exists?String((s.data()||{}).k||''):'';refreshPack();},bad);
+    document.addEventListener('visibilitychange',function(){if(!document.hidden&&PKEY&&Date.now()-packAt>15*60000)refreshPack();});
     db.collection('leads').onSnapshot(function(snap){ok(snap.metadata);var m=new Map(),sy={};snap.docs.forEach(function(x){var v=x.data();m.set(x.id,v);sy[x.id]=JSON.stringify(v);});LEADS=m;SYNC.leads=sy;refreshSoon();},bad);
     db.collection('routes').onSnapshot(function(snap){var m=new Map(),sy={};snap.docs.forEach(function(x){var v=x.data();m.set(x.id,v);sy[x.id]=JSON.stringify(v);});ROUTES=m;SYNC.routes=sy;refreshSoon();},bad);
     db.doc('zones/main').onSnapshot(function(s){ZDOC=s.exists?s.data():null;pickZones();},function(){});
@@ -704,8 +716,8 @@ function wire(){
   $('#cf-save').addEventListener('click',function(){var a=$('#cf-r0').value.trim()||'Salesman 1',b=$('#cf-r1').value.trim()||'Salesman 2';CFG={reps:[a,b]};persist();fillReps();refresh();toast('Names saved.');});
   $('#bk-export').addEventListener('click',exportData);
   $('#bk-file').addEventListener('change',function(){if(this.files&&this.files[0])importData(this.files[0]);this.value='';});
-  $('#dp-file').addEventListener('change',function(){if(this.files&&this.files[0])loadPack(this.files[0]);this.value='';});
-  $('#acct-out').addEventListener('click',function(){if(ACCT)ACCT.signOut();});
+  $('#dp-refresh').addEventListener('click',function(){if(window.BF_refreshPack)window.BF_refreshPack(true);else toast('Sign in first.');});
+  $('#acct-out').addEventListener('click',function(){try{localStorage.removeItem('bf_pack');}catch(e){}if(ACCT)ACCT.signOut();});
 }
 
 ME=store.get('bf_me')||'office';
